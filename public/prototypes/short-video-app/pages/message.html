@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>消息 - 短视频</title>
+  <link rel="stylesheet" href="../components/common.css">
+  <link rel="stylesheet" href="../components/styles.css">
+  <style>
+    .message-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+    .message-icon { font-size: 80px; margin-bottom: 20px; }
+    .message-text { font-size: 24px; }
+  </style>
+</head>
+<body>
+  <div class="message-container">
+    <div class="message-icon">💬</div>
+    <div class="message-text">消息中心</div>
+  </div>
+  <div id="bottomNav"></div>
+  <script src="../components/bottom-nav.js"></script>
+  <script>
+    const bottomNav = new BottomNav('message');
+    document.getElementById('bottomNav').innerHTML = bottomNav.render();
+  </script>
+</body>
+</html>

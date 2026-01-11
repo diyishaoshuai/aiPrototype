@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>首页 - 短视频</title>
+  <link rel="stylesheet" href="../components/common.css">
+  <link rel="stylesheet" href="../components/styles.css">
+</head>
+<body>
+  <div class="video-container" id="videoContainer"></div>
+  <div id="bottomNav"></div>
+
+  <!-- 评论弹窗 -->
+  <div id="commentModal" class="modal">
+    <div class="modal-content comment-modal">
+      <div class="modal-header">
+        <span>8234条评论</span>
+        <span class="close" onclick="closeComments()">×</span>
+      </div>
+      <div class="comment-list" id="commentList"></div>
+      <div class="comment-input">
+        <input type="text" placeholder="说点什么..." id="commentInput">
+        <button onclick="submitComment()">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分享弹窗 -->
+  <div id="shareModal" class="modal">
+    <div class="modal-content share-modal">
+      <div class="modal-header">
+        <span>分享到</span>
+        <span class="close" onclick="closeShare()">×</span>
+      </div>
+      <div class="share-options">
+        <div class="share-item" onclick="shareToWechat()">
+          <div class="share-icon">💬</div>
+          <div class="share-text">微信</div>
+        </div>
+        <div class="share-item" onclick="shareToMoments()">
+          <div class="share-icon">🔄</div>
+          <div class="share-text">朋友圈</div>
+        </div>
+        <div class="share-item" onclick="copyLink()">
+          <div class="share-icon">🔗</div>
+          <div class="share-text">复制链接</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast提示 -->
+  <div id="toast" class="toast"></div>
+
+  <script src="../components/video-item.js"></script>
+  <script src="../components/action-buttons.js"></script>
+  <script src="../components/bottom-nav.js"></script>
+  <script>
+    const videos = [
+      { id: 1, title: '美食探店', bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+      { id: 2, title: '旅行日记', bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+      { id: 3, title: '搞笑段子', bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+      { id: 4, title: '舞蹈教学', bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+      { id: 5, title: '游戏实况', bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
+    ];
+
+    let currentIndex = 0;
+    let startY = 0;
+    let isDragging = false;
+    const bottomNav = new BottomNav('home');
+
+    function initPage() {
+      const container = document.getElementById('videoContainer');
+      videos.forEach((video, index) => {
+        const item = document.createElement('div');
+        item.className = 'video-item' + (index === 0 ? ' active' : (index === 1 ? ' next' : ''));
+        item.style.background = video.bg;
+        item.innerHTML = `
+          <div class="video-placeholder">
+            <div class="video-number">#${video.id}</div>
+            <div class="video-title">${video.title}</div>
+          </div>
+          <div class="action-buttons">
+            <div class="action-btn" onclick="toggleLike(this)">
+              <div class="action-icon">❤️</div>
+              <div class="action-text">12.5w</div>
+            </div>
+            <div class="action-btn" onclick="showComments()">
+              <div class="action-icon">💬</div>
+              <div class="action-text">8234</div>
+            </div>
+            <div class="action-btn" onclick="showShare()">
+              <div class="action-icon">📤</div>
+              <div class="action-text">分享</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      document.getElementById('bottomNav').innerHTML = bottomNav.render();
+      setupSwipe();
+    }
+
+    // 切换视频
+    function switchVideo(direction) {
+      const items = document.querySelectorAll('.video-item');
+      const newIndex = currentIndex + direction;
+      if (newIndex < 0 || newIndex >= videos.length) {
+        resetPosition();
+        return;
+      }
+
+      items.forEach(item => {
+        item.classList.remove('active', 'prev', 'next');
+        item.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        item.style.transform = '';
+      });
+
+      items[currentIndex].classList.add(direction > 0 ? 'prev' : 'next');
+      items[newIndex].classList.add('active');
+      if (newIndex + 1 < videos.length) items[newIndex + 1].classList.add('next');
+      if (newIndex - 1 >= 0) items[newIndex - 1].classList.add('prev');
+      currentIndex = newIndex;
+    }
+
+    // 重置位置
+    function resetPosition() {
+      const items = document.querySelectorAll('.video-item');
+      items.forEach(item => {
+        item.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        item.style.transform = '';
+      });
+    }
+
+    // 设置滑动
+    function setupSwipe() {
+      const container = document.getElementById('videoContainer');
+      let startY = 0;
+      let currentY = 0;
+      let isDragging = false;
+      let startTime = 0;
+
+      // 触摸事件
+      container.addEventListener('touchstart', handleStart);
+      container.addEventListener('touchmove', handleMove, { passive: false });
+      container.addEventListener('touchend', handleEnd);
+
+      // 鼠标事件
+      container.addEventListener('mousedown', handleStart);
+      container.addEventListener('mousemove', handleMove);
+      container.addEventListener('mouseup', handleEnd);
+      container.addEventListener('mouseleave', handleEnd);
+
+      function handleStart(e) {
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        currentY = startY;
+        isDragging = true;
+        startTime = Date.now();
+        container.style.transition = 'none';
+        container.style.cursor = 'grabbing';
+      }
+
+      function handleMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        currentY = e.touches ? e.touches[0].clientY : e.clientY;
+        const diff = currentY - startY;
+        const items = document.querySelectorAll('.video-item');
+
+        items.forEach((item) => {
+          if (item.classList.contains('active')) {
+            item.style.transform = `translateY(${diff}px)`;
+          } else if (item.classList.contains('next')) {
+            item.style.transform = `translateY(calc(100% + ${diff}px))`;
+          } else if (item.classList.contains('prev')) {
+            item.style.transform = `translateY(calc(-100% + ${diff}px))`;
+          }
+        });
+      }
+
+      function handleEnd(e) {
+        if (!isDragging) return;
+        const diff = currentY - startY;
+        const duration = Date.now() - startTime;
+        const velocity = Math.abs(diff) / duration;
+
+        container.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        container.style.cursor = 'grab';
+
+        if (Math.abs(diff) > 80 || velocity > 0.5) {
+          if (diff < 0) switchVideo(1);
+          else if (diff > 0) switchVideo(-1);
+          else resetPosition();
+        } else {
+          resetPosition();
+        }
+
+        isDragging = false;
+      }
+    }
+
+    // 点赞
+    function toggleLike(btn) {
+      btn.classList.toggle('liked');
+      const text = btn.querySelector('.action-text');
+      text.textContent = btn.classList.contains('liked') ? '12.6w' : '12.5w';
+    }
+
+    // 评论功能
+    const comments = [
+      { id: 1, user: '用户A', content: '太好看了！', likes: 128, replies: [] },
+      { id: 2, user: '用户B', content: '在哪里拍的？', likes: 56, replies: [
+        { id: 3, user: '作者', content: '在北京', likes: 12 }
+      ]}
+    ];
+    let replyingTo = null;
+
+    // Toast提示
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    function showComments() {
+      document.getElementById('commentModal').style.display = 'flex';
+      renderComments();
+    }
+
+    function closeComments() {
+      document.getElementById('commentModal').style.display = 'none';
+    }
+
+    function renderComments() {
+      const list = document.getElementById('commentList');
+      list.innerHTML = comments.map(c => `
+        <div class="comment-item">
+          <div class="comment-header">
+            <span class="comment-user">${c.user}</span>
+            <span class="comment-like" onclick="likeComment(${c.id})">
+              ❤️ ${c.likes}
+            </span>
+          </div>
+          <div class="comment-content">${c.content}</div>
+          ${c.replies.length > 0 ? `
+            <div class="comment-replies">
+              ${c.replies.map(r => `
+                <div class="reply-item">
+                  <span class="reply-user">${r.user}:</span>
+                  <span class="reply-content">${r.content}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          <div class="comment-actions">
+            <span onclick="replyComment(${c.id})">回复</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function likeComment(id) {
+      const comment = comments.find(c => c.id === id);
+      if (comment) {
+        comment.likes++;
+        renderComments();
+      }
+    }
+
+    function replyComment(id) {
+      const comment = comments.find(c => c.id === id);
+      if (comment) {
+        replyingTo = id;
+        const input = document.getElementById('commentInput');
+        input.placeholder = `回复 ${comment.user}`;
+        input.focus();
+      }
+    }
+
+    function submitComment() {
+      const input = document.getElementById('commentInput');
+      if (input.value.trim()) {
+        if (replyingTo) {
+          // 回复评论
+          const comment = comments.find(c => c.id === replyingTo);
+          comment.replies.push({
+            id: Date.now(),
+            user: '我',
+            content: input.value,
+            likes: 0
+          });
+          showToast('回复成功');
+          replyingTo = null;
+          input.placeholder = '说点什么...';
+        } else {
+          // 发表评论
+          comments.unshift({
+            id: Date.now(),
+            user: '我',
+            content: input.value,
+            likes: 0,
+            replies: []
+          });
+        }
+        input.value = '';
+        renderComments();
+      }
+    }
+
+    // 分享功能
+    function showShare() {
+      document.getElementById('shareModal').style.display = 'flex';
+    }
+
+    function closeShare() {
+      document.getElementById('shareModal').style.display = 'none';
+    }
+
+    function shareToWechat() {
+      showToast('分享到微信功能（需要微信SDK）');
+      closeShare();
+    }
+
+    function shareToMoments() {
+      showToast('分享到朋友圈功能（需要微信SDK）');
+      closeShare();
+    }
+
+    function copyLink() {
+      const link = window.location.href;
+      navigator.clipboard.writeText(link).then(() => {
+        showToast('链接已复制到剪贴板');
+        closeShare();
+      }).catch(() => {
+        showToast('复制失败，请手动复制');
+        closeShare();
+      });
+    }
+
+    initPage();
+  </script>
+</body>
+</html>
