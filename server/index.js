@@ -6,7 +6,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const app = express()
-const PORT = 3002
+const PORT = 8080
 
 // 中间件
 app.use(cors())
