@@ -44,8 +44,7 @@ const handleTabClick = (tab) => {
 }
 
 const goToSearch = () => {
-  // 搜索功能待实现
-  console.log('搜索')
+  router.push('/search')
 }
 </script>
 

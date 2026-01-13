@@ -1,11 +1,11 @@
 <template>
-  <div class="square-page">
+  <div class="publish-page">
     <div class="content">
-      <div class="icon">🔥</div>
-      <h1 class="title">广场页面</h1>
-      <p class="desc">发现热门内容</p>
+      <div class="icon">➕</div>
+      <h1 class="title">发布页面</h1>
+      <p class="desc">分享你的精彩瞬间</p>
     </div>
-    <BottomNav active-tab="square" />
+    <BottomNav active-tab="publish" />
   </div>
 </template>
 
@@ -14,7 +14,7 @@ import BottomNav from '../components/BottomNav.vue'
 </script>
 
 <style scoped>
-.square-page {
+.publish-page {
   background: #f5f5f5;
   min-height: 100vh;
   padding-bottom: 56px;

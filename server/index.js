@@ -15,17 +15,6 @@ app.use(express.json())
 // MongoDB 连接状态
 let isMongoConnected = false
 
-// MongoDB 连接
-mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost:27017/ai-prototype-hub')
-  .then(() => {
-    console.log('✅ MongoDB 连接成功')
-    isMongoConnected = true
-  })
-  .catch(err => {
-    console.log('⚠️  MongoDB 连接失败，使用模拟数据')
-    isMongoConnected = false
-  })
-
 // 数据模型
 const prototypeSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -46,5 +35,30 @@ const prototypeSchema = new mongoose.Schema({
 })
 
 const Prototype = mongoose.model('Prototype', prototypeSchema)
+
+// MongoDB 连接
+mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost:27017/ai-prototype-hub')
+  .then(async () => {
+    console.log('✅ MongoDB 连接成功')
+    isMongoConnected = true
+
+    // 检查数据库是否为空，如果为空则初始化数据
+    try {
+      const count = await Prototype.countDocuments()
+      if (count === 0) {
+        console.log('📦 初始化数据库...')
+        const mockData = (await import('./mockData.js')).default
+        await Prototype.insertMany(mockData)
+        console.log('✅ 数据初始化完成')
+      }
+    } catch (err) {
+      console.error('❌ 数据初始化失败:', err.message)
+    }
+  })
+  .catch(err => {
+    console.log('⚠️  MongoDB 连接失败，使用模拟数据')
+    console.error('错误详情:', err.message)
+    isMongoConnected = false
+  })
 
 export { app, Prototype, PORT, isMongoConnected }

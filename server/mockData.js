@@ -1,7 +1,6 @@
 // 模拟数据（当 MongoDB 连接失败时使用）
 const mockData = [
   {
-    _id: '1',
     title: '短视频应用',
     description: '仿抖音/快手的短视频应用原型，支持多页面切换',
     category: '移动端',

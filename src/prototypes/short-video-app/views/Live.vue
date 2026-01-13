@@ -1,6 +1,6 @@
 <template>
-  <div class="recommend-page">
-    <TopTabs active-tab="recommend" />
+  <div class="live-page">
+    <TopTabs active-tab="live" />
 
     <div
       class="live-container"
@@ -44,9 +44,9 @@ const startY = ref(0)
 const isDragging = ref(false)
 
 const lives = ref([
-  { id: 1, name: '丽丽', title: '精彩直播 1', avatar: '💃', viewers: '15.8万' },
-  { id: 2, name: '大力', title: '精彩直播 2', avatar: '💪', viewers: '11.2万' },
-  { id: 3, name: '小雨', title: '精彩直播 3', avatar: '🎨', viewers: '9.5万' }
+  { id: 1, name: '小美', title: '精彩直播 1', avatar: '👧', viewers: '12.3万' },
+  { id: 2, name: '阿强', title: '精彩直播 2', avatar: '👨', viewers: '8.6万' },
+  { id: 3, name: '甜甜', title: '精彩直播 3', avatar: '👩', viewers: '6.2万' }
 ])
 
 const handleStart = (e) => {
@@ -76,7 +76,7 @@ const handleEnd = (e) => {
 </script>
 
 <style scoped>
-.recommend-page {
+.live-page {
   background: #000;
   min-height: 100vh;
   padding-top: 48px;
