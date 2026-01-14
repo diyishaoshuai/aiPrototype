@@ -59,12 +59,12 @@ export default [
     component: () => import('./views/DramaFilter.vue')
   },
   {
-    path: '/drama/:id',
-    name: 'DramaDetail',
-    component: () => import('./views/DramaDetail.vue')
+    path: '/drama/ranking',
+    name: 'DramaRanking',
+    component: () => import('./views/DramaRankingList.vue')
   },
   {
-    path: '/drama/:id/player',
+    path: '/drama/:id',
     name: 'DramaPlayer',
     component: () => import('./views/DramaPlayer.vue')
   }

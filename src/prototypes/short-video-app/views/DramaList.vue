@@ -88,11 +88,11 @@ const goToFilter = () => {
 }
 
 const goToDetail = (id) => {
-  router.push({ name: 'DramaDetail', params: { id } })
+  router.push({ name: 'DramaPlayer', params: { id } })
 }
 
 const goToRankingMore = () => {
-  console.log('查看更多排行榜')
+  router.push({ name: 'DramaRanking' })
 }
 </script>
 

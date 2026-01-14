@@ -23,11 +23,15 @@
             @node-click="handleNodeClick"
             highlight-current
             default-expand-all
+            :indent="20"
           >
             <template #default="{ node, data }">
-              <span class="tree-node">
-                <el-icon><Document /></el-icon>
-                <span>{{ node.label }}</span>
+              <span class="tree-node" :class="{ 'is-parent': data.children && data.children.length > 0, 'is-leaf': !data.children || data.children.length === 0 }">
+                <el-icon :size="16" class="node-icon">
+                  <component :is="getPageIcon(data)" />
+                </el-icon>
+                <span class="node-label">{{ node.label }}</span>
+                <span v-if="data.children && data.children.length > 0" class="node-count">{{ data.children.length }}</span>
               </span>
             </template>
           </el-tree>
@@ -66,7 +70,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePrototypeStore } from '@/stores/prototype'
-import { Document } from '@element-plus/icons-vue'
+import { Document, Folder, FolderOpened, HomeFilled, List, Filter, TrendCharts } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,6 +116,26 @@ const handleNodeClick = (data) => {
 
 const goBack = () => {
   router.push('/dashboard')
+}
+
+// 根据页面类型获取图标
+const getPageIcon = (data) => {
+  if (data.children && data.children.length > 0) {
+    return Folder
+  }
+
+  const label = data.label.toLowerCase()
+  if (label.includes('首页') || label.includes('主页')) {
+    return HomeFilled
+  } else if (label.includes('列表') || label.includes('排行')) {
+    return List
+  } else if (label.includes('筛选') || label.includes('分类')) {
+    return Filter
+  } else if (label.includes('播放') || label.includes('详情')) {
+    return TrendCharts
+  }
+
+  return Document
 }
 </script>
 
@@ -191,6 +215,112 @@ const goBack = () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.tree-node:hover {
+  background: #f5f7fa;
+}
+
+.tree-node.is-parent {
+  font-weight: 600;
+  color: #303133;
+}
+
+.tree-node.is-parent .node-icon {
+  color: #409eff;
+}
+
+.tree-node.is-leaf {
+  font-weight: 400;
+  color: #606266;
+}
+
+.tree-node.is-leaf .node-icon {
+  color: #909399;
+}
+
+.node-icon {
+  flex-shrink: 0;
+  transition: color 0.3s ease;
+}
+
+.node-label {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.node-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Element Plus Tree 样式覆盖 */
+.nav-content :deep(.el-tree) {
+  background: transparent;
+}
+
+.nav-content :deep(.el-tree-node__content) {
+  height: auto;
+  padding: 4px 0;
+  background: transparent;
+}
+
+.nav-content :deep(.el-tree-node__content:hover) {
+  background: transparent;
+}
+
+.nav-content :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: transparent;
+}
+
+.nav-content :deep(.el-tree-node.is-current > .el-tree-node__content .tree-node) {
+  background: #e6f7ff;
+  color: #409eff;
+}
+
+.nav-content :deep(.el-tree-node.is-current > .el-tree-node__content .tree-node .node-icon) {
+  color: #409eff;
+}
+
+.nav-content :deep(.el-tree-node__expand-icon) {
+  color: #909399;
+  font-size: 14px;
+}
+
+.nav-content :deep(.el-tree-node__expand-icon.is-leaf) {
+  color: transparent;
+}
+
+.nav-content :deep(.el-tree-node:focus > .el-tree-node__content) {
+  background: transparent;
+}
+
+.nav-content :deep(.el-tree-node__children) {
+  position: relative;
+}
+
+.nav-content :deep(.el-tree-node__children::before) {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #e4e7ed;
 }
 
 /* 手机预览区域 */
