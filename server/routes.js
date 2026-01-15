@@ -1,5 +1,42 @@
 import { app, Prototype, PORT, isMongoConnected } from './index.js'
-import mockData from './mockData.js'
+import mockData, { getShortVideoAppPageStructure } from './mockData.js'
+
+function normalizeShortVideoAppPrototype(proto) {
+  // 只修正“短视频应用”这个原型（Mongo / mockData 都适用）
+  if (!proto) return { changed: false, proto }
+
+  const filePath = proto.filePath
+  const title = proto.title
+  const looksLikeShortVideoApp =
+    title === '短视频应用' || filePath === '/prototypes/short-video-app.html'
+
+  if (!looksLikeShortVideoApp) return { changed: false, proto }
+
+  const desired = getShortVideoAppPageStructure()
+  const current = Array.isArray(proto.pageStructure) ? proto.pageStructure : []
+
+  // 旧数据常见特征：顶层只有 5 个叶子节点，且包含“热门/消息/我的”等 label
+  const isOldFlat =
+    current.length > 0 &&
+    current.every(n => !n?.children || n.children.length === 0) &&
+    current.some(n => ['热门', '消息', '我的'].includes(n?.label))
+
+  const shouldReplace =
+    current.length === 0 ||
+    isOldFlat ||
+    JSON.stringify(current) !== JSON.stringify(desired)
+
+  if (!shouldReplace) return { changed: false, proto }
+
+  return {
+    changed: true,
+    proto: {
+      ...proto,
+      filePath: '/prototypes/short-video-app.html',
+      pageStructure: desired
+    }
+  }
+}
 
 // API 路由
 
@@ -37,7 +74,28 @@ app.get('/api/prototypes', async (req, res) => {
     }
 
     const prototypes = await Prototype.find(query).sort({ createdAt: -1 })
-    res.json(prototypes)
+
+    // 修正旧的 pageStructure（必要时写回）
+    const fixed = await Promise.all(
+      prototypes.map(async p => {
+        const raw = p.toObject ? p.toObject() : p
+        const { changed, proto } = normalizeShortVideoAppPrototype(raw)
+        if (changed && proto?._id) {
+          try {
+            await Prototype.findByIdAndUpdate(
+              proto._id,
+              { filePath: proto.filePath, pageStructure: proto.pageStructure, updatedAt: Date.now() },
+              { new: false }
+            )
+          } catch {
+            // 忽略写回失败，至少保证本次响应正确
+          }
+        }
+        return proto
+      })
+    )
+
+    res.json(fixed)
   } catch (error) {
     res.status(500).json({ error: '获取原型列表失败' })
   }
@@ -60,7 +118,20 @@ app.get('/api/prototypes/:id', async (req, res) => {
     if (!prototype) {
       return res.status(404).json({ error: '原型不存在' })
     }
-    res.json(prototype)
+    const raw = prototype.toObject ? prototype.toObject() : prototype
+    const { changed, proto } = normalizeShortVideoAppPrototype(raw)
+    if (changed && proto?._id) {
+      try {
+        await Prototype.findByIdAndUpdate(
+          proto._id,
+          { filePath: proto.filePath, pageStructure: proto.pageStructure, updatedAt: Date.now() },
+          { new: false }
+        )
+      } catch {
+        // ignore
+      }
+    }
+    res.json(proto)
   } catch (error) {
     res.status(500).json({ error: '获取原型失败' })
   }
