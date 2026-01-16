@@ -9,7 +9,7 @@
     @pointercancel="onPointerCancel"
   >
     <!-- 顶部导航栏 -->
-    <div class="top-nav">
+    <div v-show="!isSpeedPlaying && !isFullscreen" class="top-nav">
       <button class="back-btn" @click="goBack">←</button>
       <div class="drama-info-top">
         <div class="drama-name">{{ dramaInfo.name }}</div>
@@ -54,14 +54,14 @@
     </div>
 
     <!-- 左下角信息区域 -->
-    <div class="left-info">
+    <div v-show="!isSpeedPlaying && !isFullscreen" class="left-info">
       <div class="author-name">@{{ dramaInfo.author }}</div>
       <div class="episode-title">第{{ currentEpisode.episode }}集</div>
       <div class="episode-desc">{{ currentEpisode.description }}</div>
     </div>
 
     <!-- 右下角功能按钮 -->
-    <div class="right-actions">
+    <div v-show="!isSpeedPlaying && !isFullscreen" class="right-actions">
       <!-- 发布人头像 + 关注按钮 -->
       <div class="action-item avatar-wrapper">
         <div class="avatar">{{ dramaInfo.authorAvatar }}</div>
@@ -96,17 +96,40 @@
       </div>
     </div>
 
+    <!-- 左侧倍速播放检测区域 -->
+    <div 
+      class="speed-play-zone"
+      @pointerdown="onSpeedPlayDown"
+      @pointermove="onSpeedPlayMove"
+      @pointerup="onSpeedPlayUp"
+      @pointercancel="onSpeedPlayUp"
+    ></div>
+
     <!-- 底部短剧信息栏 -->
-    <div class="bottom-bar" @click="showEpisodeSheet = true">
+    <div 
+      class="bottom-bar" 
+      :class="{ 'speed-mode': isSpeedPlaying || isFullscreen }" 
+      :style="{ cursor: (isSpeedPlaying || isFullscreen) ? 'default' : 'pointer' }"
+      @click="!(isSpeedPlaying || isFullscreen) && (showEpisodeSheet = true)"
+    >
       <div class="bottom-bar-content">
-        <div class="drama-title">{{ dramaInfo.name }}</div>
-        <div class="total-episodes">共{{ dramaInfo.totalEpisodes }}集</div>
-        <div class="arrow-icon">▲</div>
+        <template v-if="!isSpeedPlaying && !isFullscreen">
+          <div class="drama-title">{{ dramaInfo.name }}</div>
+          <div class="total-episodes">共{{ dramaInfo.totalEpisodes }}集</div>
+          <div class="arrow-icon">▲</div>
+        </template>
+        <template v-else>
+          <div class="speed-text-bottom">
+            <span v-if="isSpeedPlaying && isFullscreen">x2 倍速 · 全屏模式</span>
+            <span v-else-if="isSpeedPlaying">x2 倍速播放中</span>
+            <span v-else-if="isFullscreen">全屏模式</span>
+          </div>
+        </template>
       </div>
     </div>
 
     <!-- 分享半屏弹窗 -->
-    <div v-if="showShareSheet" class="share-sheet" @click.self="showShareSheet = false">
+    <div v-if="showShareSheet && !isSpeedPlaying && !isFullscreen" class="share-sheet" @click.self="showShareSheet = false">
       <div class="share-content" @click.stop>
         <!-- 顶部标题 -->
         <div class="share-header">
@@ -133,7 +156,7 @@
     </div>
 
     <!-- 评论半屏弹窗 -->
-    <div v-if="showCommentSheet" class="comment-sheet" @click.self="showCommentSheet = false">
+    <div v-if="showCommentSheet && !isSpeedPlaying && !isFullscreen" class="comment-sheet" @click.self="showCommentSheet = false">
       <div class="comment-content" @click.stop>
         <!-- 顶部标题栏 -->
         <div class="comment-header">
@@ -171,7 +194,7 @@
               <!-- 回复列表 -->
               <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
                 <div
-                  v-for="reply in comment.replies"
+                  v-for="reply in getDisplayedReplies(comment)"
                   :key="reply.id"
                   class="reply-item"
                   :class="{ 'heartbroken': reply.isHeartbroken }"
@@ -199,6 +222,15 @@
                     </div>
                   </div>
                 </div>
+                
+                <!-- 展开/收起更多回复按钮 -->
+                <div 
+                  v-if="getSortedReplies(comment).length > 2" 
+                  class="expand-replies-btn"
+                  @click="toggleRepliesExpanded(comment.id)"
+                >
+                  {{ isRepliesExpanded(comment.id) ? '收起' : `展开更多 ${getSortedReplies(comment).length - 2} 条回复` }}
+                </div>
               </div>
             </div>
           </div>
@@ -221,8 +253,13 @@
     </div>
 
     <!-- 选集半屏弹窗 -->
-    <div v-if="showEpisodeSheet" class="episode-sheet" @click.self="showEpisodeSheet = false">
-      <div class="sheet-content" @click.stop>
+    <div v-if="showEpisodeSheet && !isSpeedPlaying && !isFullscreen" class="episode-sheet" @click.self="showEpisodeSheet = false">
+      <div 
+        class="sheet-content" 
+        :class="{ 'sheet-fullscreen': isSheetFullscreen }"
+        :style="{ maxHeight: episodeSheetHeight }"
+        @click.stop
+      >
         <!-- 顶部短剧信息 -->
         <div class="sheet-header">
           <div class="sheet-drama-info">
@@ -254,14 +291,18 @@
             :key="category.id"
             class="category-tab"
             :class="{ active: category.id === activeCategory }"
-            @click="activeCategory = category.id"
+            @click="switchCategory(category.id)"
           >
             {{ category.label }}
           </div>
         </div>
 
         <!-- 选集列表 -->
-        <div class="episode-list">
+        <div 
+          ref="episodeListRef"
+          class="episode-list"
+          @scroll="handleEpisodeListScroll"
+        >
           <div
             v-for="episode in filteredEpisodes"
             :key="episode.episode"
@@ -292,7 +333,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
@@ -336,8 +377,29 @@ const currentEpisodeIndex = ref(0)
 // 是否关注
 const isFollowed = ref(false)
 
+// 倍速播放相关状态
+const isSpeedPlaying = ref(false)
+const speedPlayZoneActive = ref(false)
+
+// 全屏模式相关状态
+const isFullscreen = ref(false)
+
 // 是否显示选集半屏
 const showEpisodeSheet = ref(false)
+
+// 选集弹窗高度（动态调整）
+const episodeSheetHeight = ref('70vh')
+const episodeListRef = ref(null)
+const initialScrollTop = ref(0)
+
+// 判断弹窗是否全屏
+const isSheetFullscreen = computed(() => {
+  if (episodeSheetHeight.value.includes('px')) {
+    const height = parseFloat(episodeSheetHeight.value)
+    return height >= window.innerHeight * 0.95
+  }
+  return false
+})
 
 // 简介是否展开
 const descExpanded = ref(false)
@@ -433,10 +495,25 @@ let lastY = 0
 let lastT = 0
 let moved = false
 
+// 双击检测状态
+let lastClickTime = 0
+let lastClickX = 0
+let lastClickY = 0
+const DOUBLE_CLICK_DELAY = 300 // 双击间隔时间（ms）
+const DOUBLE_CLICK_DISTANCE = 50 // 双击位置允许的最大距离（px）
+
 const onPointerDown = (e) => {
   if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) return
   if (isAnimating.value) return
   if (e.isPrimary === false) return
+
+  // 检查点击目标是否为可交互元素（按钮、进度条、底部栏等）
+  const target = e.target
+  const isInteractiveElement = target.closest('.bottom-bar, .progress-bar-container, .right-actions, .top-nav, .left-info, .speed-play-zone')
+  if (isInteractiveElement) {
+    // 如果是可交互元素，不处理滑动逻辑，让点击事件正常触发
+    return
+  }
 
   e.currentTarget?.setPointerCapture?.(e.pointerId)
 
@@ -490,6 +567,42 @@ const settleAfterRelease = (dy, velocity) => {
 
 const onPointerUp = async (e) => {
   if (!isPointerDown.value) return
+  
+  const currentTime = performance.now()
+  const currentX = e.clientX
+  const currentY = e.clientY
+  
+  // 检测双击
+  if (!moved) {
+    const timeSinceLastClick = currentTime - lastClickTime
+    const distanceFromLastClick = Math.sqrt(
+      Math.pow(currentX - lastClickX, 2) + Math.pow(currentY - lastClickY, 2)
+    )
+    
+    // 检查是否在可交互元素上
+    const target = e.target
+    const isInteractiveElement = target.closest('.bottom-bar, .progress-bar-container, .right-actions, .top-nav, .left-info, .speed-play-zone')
+    
+    if (!isInteractiveElement && 
+        timeSinceLastClick < DOUBLE_CLICK_DELAY && 
+        distanceFromLastClick < DOUBLE_CLICK_DISTANCE) {
+      // 检测到双击，切换全屏
+      toggleFullscreen(e)
+      lastClickTime = 0 // 重置，避免连续触发
+      isPointerDown.value = false
+      await resetToCenterNoTransition()
+      return
+    } else {
+      // 记录点击信息，等待可能的第二次点击
+      lastClickTime = currentTime
+      lastClickX = currentX
+      lastClickY = currentY
+    }
+  } else {
+    // 有移动，重置双击检测
+    lastClickTime = 0
+  }
+  
   isPointerDown.value = false
 
   if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) {
@@ -564,6 +677,9 @@ const showCommentSheet = ref(false)
 const commentInput = ref('')
 const replyToComment = ref(null)
 
+// 回复展开状态：记录每个评论的回复是否展开
+const expandedReplies = ref(new Set())
+
 // 分享相关状态
 const showShareSheet = ref(false)
 
@@ -602,6 +718,32 @@ const commentsList = ref([
         isHeartbroken: false,
         time: '1小时前',
         replyTo: '甜甜圈少女'
+      },
+      {
+        id: 12,
+        userId: 'user7',
+        userName: '剧迷小王',
+        avatar: '🎬',
+        content: '女主颜值真的绝了！',
+        likes: 156,
+        heartbreaks: 0,
+        isLiked: false,
+        isHeartbroken: false,
+        time: '50分钟前',
+        replyTo: '甜甜圈少女'
+      },
+      {
+        id: 13,
+        userId: 'user8',
+        userName: '追剧小能手',
+        avatar: '📺',
+        content: '我已经三刷了！',
+        likes: 78,
+        heartbreaks: 0,
+        isLiked: false,
+        isHeartbroken: false,
+        time: '30分钟前',
+        replyTo: '甜甜圈少女'
       }
     ]
   },
@@ -636,7 +778,7 @@ const commentsList = ref([
         userName: '吃瓜群众',
         avatar: '👤',
         content: '确实，这个反转太精彩了',
-        likes: 45,
+        likes: 245,
         heartbreaks: 0,
         isLiked: false,
         isHeartbroken: false,
@@ -649,11 +791,37 @@ const commentsList = ref([
         userName: '短剧爱好者',
         avatar: '👥',
         content: '我也是！完全没猜到',
-        likes: 23,
+        likes: 123,
         heartbreaks: 0,
         isLiked: false,
         isHeartbroken: false,
         time: '3小时前',
+        replyTo: '剧情分析师'
+      },
+      {
+        id: 33,
+        userId: 'user9',
+        userName: '编剧观察员',
+        avatar: '✍️',
+        content: '编剧的功力确实深厚，这个反转设计得很巧妙',
+        likes: 89,
+        heartbreaks: 0,
+        isLiked: false,
+        isHeartbroken: false,
+        time: '2小时前',
+        replyTo: '剧情分析师'
+      },
+      {
+        id: 34,
+        userId: 'user10',
+        userName: '剧情控',
+        avatar: '🎭',
+        content: '看到这里我都惊呆了！',
+        likes: 67,
+        heartbreaks: 0,
+        isLiked: false,
+        isHeartbroken: false,
+        time: '1小时前',
         replyTo: '剧情分析师'
       }
     ]
@@ -665,6 +833,45 @@ const showComments = () => {
   showCommentSheet.value = true
   replyToComment.value = null
   commentInput.value = ''
+  // 重置所有回复展开状态
+  expandedReplies.value.clear()
+}
+
+// 获取排序后的回复列表（按点赞数降序）
+const getSortedReplies = (comment) => {
+  if (!comment.replies || comment.replies.length === 0) return []
+  // 按点赞数降序排序
+  return [...comment.replies].sort((a, b) => b.likes - a.likes)
+}
+
+// 获取要显示的回复列表
+const getDisplayedReplies = (comment) => {
+  const sortedReplies = getSortedReplies(comment)
+  if (sortedReplies.length <= 2) {
+    // 如果回复数少于等于2条，全部显示
+    return sortedReplies
+  }
+  
+  // 如果已展开，显示全部；否则只显示前2条（赞最多的）
+  if (isRepliesExpanded(comment.id)) {
+    return sortedReplies
+  } else {
+    return sortedReplies.slice(0, 2)
+  }
+}
+
+// 检查回复是否已展开
+const isRepliesExpanded = (commentId) => {
+  return expandedReplies.value.has(commentId)
+}
+
+// 切换回复展开状态
+const toggleRepliesExpanded = (commentId) => {
+  if (expandedReplies.value.has(commentId)) {
+    expandedReplies.value.delete(commentId)
+  } else {
+    expandedReplies.value.add(commentId)
+  }
 }
 
 // 点击评论准备回复
@@ -692,11 +899,32 @@ const sendComment = () => {
   }
 
   if (replyToComment.value) {
-    // 回复评论
-    const parentComment = commentsList.value.find(c => c.id === replyToComment.value.id)
+    // 回复评论或回复
+    // 先尝试在主评论列表中找到（说明是回复主评论）
+    let parentComment = commentsList.value.find(c => c.id === replyToComment.value.id)
+    
+    // 如果没找到，说明是回复某个回复，需要在所有评论的replies中查找
+    if (!parentComment) {
+      for (const comment of commentsList.value) {
+        if (comment.replies && comment.replies.length > 0) {
+          const foundReply = comment.replies.find(r => r.id === replyToComment.value.id)
+          if (foundReply) {
+            parentComment = comment
+            break
+          }
+        }
+      }
+    }
+    
     if (parentComment) {
       newComment.replyTo = replyToComment.value.userName
+      // 确保replies数组存在
+      if (!parentComment.replies) {
+        parentComment.replies = []
+      }
       parentComment.replies.push(newComment)
+      // 新回复添加后，如果之前是展开状态，保持展开；否则不展开
+      // 这样用户可以看到自己刚发的回复
     }
   } else {
     // 评论视频
@@ -779,11 +1007,84 @@ const copyLink = () => {
   })
 }
 
+// 切换分集分类
+const switchCategory = (categoryId) => {
+  if (activeCategory.value === categoryId) return // 如果点击的是当前分类，不处理
+  
+  activeCategory.value = categoryId
+  
+  // 立即重置弹窗高度为半屏
+  episodeSheetHeight.value = '70vh'
+  
+  // 等待 DOM 更新后滚动到列表顶部
+  nextTick(() => {
+    if (episodeListRef.value) {
+      // 使用平滑滚动
+      episodeListRef.value.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }
+  })
+}
+
 // 选择集数
 const selectEpisode = (episode) => {
   currentEpisodeIndex.value = episode.episode - 1
   showEpisodeSheet.value = false
+  // 关闭时重置弹窗高度
+  episodeSheetHeight.value = '70vh'
 }
+
+// 处理选集列表滚动
+const handleEpisodeListScroll = (e) => {
+  if (!episodeListRef.value) return
+  
+  const scrollTop = e.target.scrollTop
+  const windowHeight = window.innerHeight
+  const minHeight = windowHeight * 0.7 // 70vh
+  const maxHeight = windowHeight // 100vh
+  
+  // 如果滚动到顶部，立即恢复半屏大小
+  if (scrollTop <= 0) {
+    episodeSheetHeight.value = '70vh'
+    return
+  }
+  
+  // 根据滚动距离计算弹窗高度
+  // 向下滚动时，弹窗逐渐拉高
+  // 设置一个阈值，滚动超过 30px 开始拉高
+  const scrollThreshold = 30
+  if (scrollTop > scrollThreshold) {
+    // 计算拉高的比例（0-1），最大滚动距离设为 150px
+    const maxScroll = 150
+    const scrollProgress = Math.min((scrollTop - scrollThreshold) / maxScroll, 1)
+    
+    // 计算目标高度（从 70vh 到 100vh）
+    const targetHeight = minHeight + (maxHeight - minHeight) * scrollProgress
+    episodeSheetHeight.value = `${targetHeight}px`
+  } else {
+    // 滚动距离小于阈值，保持半屏
+    episodeSheetHeight.value = '70vh'
+  }
+}
+
+// 监听弹窗显示，重置状态
+watch(showEpisodeSheet, (newVal) => {
+  if (newVal) {
+    // 打开弹窗时重置高度
+    episodeSheetHeight.value = '70vh'
+    // 等待 DOM 更新后记录初始滚动位置
+    nextTick(() => {
+      if (episodeListRef.value) {
+        initialScrollTop.value = episodeListRef.value.scrollTop
+      }
+    })
+  } else {
+    // 关闭弹窗时重置高度
+    episodeSheetHeight.value = '70vh'
+  }
+})
 
 // 格式化数字
 const formatCount = (count) => {
@@ -829,6 +1130,156 @@ const handleProgressTouchMove = (e) => {
 const handleProgressTouchEnd = (e) => {
   progressTouching = false
   e.stopPropagation()
+}
+
+// ===== 倍速播放功能 =====
+let speedPlayStartY = 0
+let speedPlayStartX = 0
+let speedPlayActivated = false // 是否已激活倍速播放
+let speedPlayTimer = null // 倍速激活定时器
+
+const onSpeedPlayDown = (e) => {
+  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) return
+  if (isAnimating.value) return
+  if (e.isPrimary === false) return
+  
+  // 检查是否在左侧区域（屏幕左侧1/3）
+  const screenWidth = window.innerWidth
+  const leftZoneWidth = screenWidth / 3
+  
+  if (e.clientX <= leftZoneWidth) {
+    // 检查是否点击在可交互元素上（进度条除外，因为进度条需要保留）
+    const target = e.target
+    const isInteractiveElement = target.closest('.right-actions, .top-nav, .left-info, .bottom-bar')
+    if (isInteractiveElement) {
+      return
+    }
+    
+    // 如果弹窗打开，先关闭
+    if (showEpisodeSheet.value) showEpisodeSheet.value = false
+    if (showCommentSheet.value) showCommentSheet.value = false
+    if (showShareSheet.value) showShareSheet.value = false
+    
+    speedPlayZoneActive.value = true
+    speedPlayActivated = false // 重置激活状态
+    speedPlayStartY = e.clientY
+    speedPlayStartX = e.clientX
+    
+    // 清除之前的定时器
+    if (speedPlayTimer) {
+      clearTimeout(speedPlayTimer)
+      speedPlayTimer = null
+    }
+    
+    // 长按200ms后自动激活倍速（如果手不动）
+    speedPlayTimer = setTimeout(() => {
+      if (speedPlayZoneActive.value && !speedPlayActivated) {
+        speedPlayActivated = true
+        isSpeedPlaying.value = true
+      }
+    }, 200)
+    
+    e.preventDefault()
+    e.stopPropagation()
+  }
+}
+
+// 监听全屏模式变化，自动关闭弹窗
+watch(isFullscreen, (newVal) => {
+  if (newVal) {
+    // 进入全屏模式时关闭所有弹窗
+    if (showEpisodeSheet.value) showEpisodeSheet.value = false
+    if (showCommentSheet.value) showCommentSheet.value = false
+    if (showShareSheet.value) showShareSheet.value = false
+  }
+})
+
+const onSpeedPlayMove = (e) => {
+  if (!speedPlayZoneActive.value) return
+  
+  const dy = Math.abs(e.clientY - speedPlayStartY)
+  const dx = Math.abs(e.clientX - speedPlayStartX)
+  
+  // 如果垂直移动距离大于水平移动距离，且超过阈值，说明用户在滑动，取消倍速播放
+  if (dy > 15 && dy > dx * 1.5) {
+    // 检测到明显的垂直滑动，取消倍速播放
+    if (speedPlayTimer) {
+      clearTimeout(speedPlayTimer)
+      speedPlayTimer = null
+    }
+    isSpeedPlaying.value = false
+    speedPlayZoneActive.value = false
+    speedPlayActivated = false
+    return
+  }
+  
+  // 如果移动距离很小（可能是手抖），不影响倍速播放
+  // 如果已经激活倍速，保持激活状态
+  if (dy < 10 && dx < 10) {
+    // 移动很小，不影响倍速播放
+    // 如果定时器还在，说明还没激活，继续等待
+    // 如果已经激活，保持激活状态
+  } else {
+    // 有移动但不够明显，如果还没激活则取消定时器
+    if (!speedPlayActivated && speedPlayTimer) {
+      clearTimeout(speedPlayTimer)
+      speedPlayTimer = null
+    }
+    // 如果已经激活，保持激活状态（允许小幅移动）
+    if (speedPlayActivated && (dy > 20 || dx > 20)) {
+      // 移动太大，取消倍速
+      isSpeedPlaying.value = false
+      speedPlayActivated = false
+    }
+  }
+  
+  // 检查是否还在左侧区域
+  const screenWidth = window.innerWidth
+  const leftZoneWidth = screenWidth / 3
+  
+  if (e.clientX > leftZoneWidth) {
+    // 移出左侧区域，取消倍速播放
+    if (speedPlayTimer) {
+      clearTimeout(speedPlayTimer)
+      speedPlayTimer = null
+    }
+    isSpeedPlaying.value = false
+    speedPlayZoneActive.value = false
+    speedPlayActivated = false
+  }
+}
+
+const onSpeedPlayUp = (e) => {
+  if (speedPlayZoneActive.value) {
+    // 清除定时器
+    if (speedPlayTimer) {
+      clearTimeout(speedPlayTimer)
+      speedPlayTimer = null
+    }
+    
+    // 松手时立即恢复原倍速（无论是否已激活）
+    isSpeedPlaying.value = false
+    speedPlayZoneActive.value = false
+    speedPlayActivated = false
+  }
+}
+
+// ===== 全屏模式功能 =====
+const toggleFullscreen = (e) => {
+  // 检查是否点击在可交互元素上
+  const target = e.target
+  const isInteractiveElement = target.closest('.bottom-bar, .progress-bar-container, .right-actions, .top-nav, .left-info, .speed-play-zone')
+  if (isInteractiveElement) {
+    return
+  }
+  
+  // 如果弹窗打开，先关闭
+  if (showEpisodeSheet.value) showEpisodeSheet.value = false
+  if (showCommentSheet.value) showCommentSheet.value = false
+  if (showShareSheet.value) showShareSheet.value = false
+  
+  // 切换全屏模式
+  isFullscreen.value = !isFullscreen.value
 }
 </script>
 
@@ -1103,6 +1554,19 @@ const handleProgressTouchEnd = (e) => {
   transition: width 0.1s ease;
 }
 
+/* 左侧倍速播放检测区域 */
+.speed-play-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 33.333%;
+  height: 100%;
+  z-index: 5;
+  /* 透明区域，不阻挡其他交互 */
+  pointer-events: auto;
+}
+
+
 /* 底部短剧信息栏 */
 .bottom-bar {
   position: absolute;
@@ -1132,6 +1596,10 @@ const handleProgressTouchEnd = (e) => {
   height: 48px;
 }
 
+.bottom-bar.speed-mode .bottom-bar-content {
+  justify-content: center;
+}
+
 .drama-title {
   font-size: 15px;
   font-weight: bold;
@@ -1145,6 +1613,13 @@ const handleProgressTouchEnd = (e) => {
 .arrow-icon {
   font-size: 12px;
   opacity: 0.8;
+}
+
+.speed-text-bottom {
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
 }
 
 /* 选集半屏弹窗 */
@@ -1168,6 +1643,11 @@ const handleProgressTouchEnd = (e) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: max-height 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sheet-content.sheet-fullscreen {
+  border-radius: 0;
 }
 
 .sheet-header {
@@ -1514,6 +1994,26 @@ const handleProgressTouchEnd = (e) => {
   margin-top: 12px;
   padding-left: 12px;
   border-left: 2px solid #f0f0f0;
+}
+
+/* 展开更多回复按钮 */
+.expand-replies-btn {
+  margin-top: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: #999;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+  display: inline-block;
+}
+
+.expand-replies-btn:hover {
+  color: #667eea;
+}
+
+.expand-replies-btn:active {
+  opacity: 0.7;
 }
 
 .reply-item {

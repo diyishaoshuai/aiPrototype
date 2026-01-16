@@ -1,7 +1,7 @@
 <template>
   <div class="banner-swiper">
     <div class="swiper-wrapper" :style="{ transform: `translateX(-${currentIndex * 100}%)` }">
-      <div v-for="(banner, index) in banners" :key="index" class="swiper-slide">
+      <div v-for="(banner, index) in banners" :key="index" class="swiper-slide" @click="goToDrama(banner.dramaId)">
         <div class="banner-image">{{ banner.emoji }}</div>
       </div>
     </div>
@@ -18,15 +18,22 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const currentIndex = ref(0)
 const banners = [
-  { emoji: '🎬' },
-  { emoji: '🎭' },
-  { emoji: '🎪' }
+  { emoji: '🎬', dramaId: 1 },
+  { emoji: '🎭', dramaId: 2 },
+  { emoji: '🎪', dramaId: 3 }
 ]
 
 let timer = null
+
+// 跳转到短剧播放页面
+const goToDrama = (dramaId) => {
+  router.push(`/drama/${dramaId}`)
+}
 
 onMounted(() => {
   timer = setInterval(() => {
@@ -59,6 +66,12 @@ onUnmounted(() => {
   min-width: 100%;
   flex-shrink: 0;
   height: 100%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.swiper-slide:active {
+  transform: scale(0.98);
 }
 
 .banner-image {

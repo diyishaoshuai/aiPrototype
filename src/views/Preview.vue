@@ -1,14 +1,20 @@
 <template>
   <div class="preview-page">
-    <div class="preview-header">
+    <header class="preview-header">
       <div class="header-content">
-        <div class="info">
-          <h2>{{ prototype?.title }}</h2>
-          <el-tag size="small">{{ prototype?.category }}</el-tag>
+        <div class="header-left">
+          <button class="back-btn" @click="goBack">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="info">
+            <h2>{{ prototype?.title }}</h2>
+            <span class="category-badge">{{ prototype?.category }}</span>
+          </div>
         </div>
-        <el-button @click="goBack">返回列表</el-button>
       </div>
-    </div>
+    </header>
 
     <div class="preview-container">
       <!-- 左侧导航栏 -->
@@ -89,9 +95,12 @@ const treeProps = {
 const pageStructure = ref([])
 
 onMounted(async () => {
+  console.log('Preview - route.params.id:', route.params.id)
   prototype.value = await store.getPrototype(route.params.id)
+  console.log('Preview - prototype:', prototype.value)
   if (prototype.value) {
     currentPageUrl.value = prototype.value.filePath
+    console.log('Preview - currentPageUrl:', currentPageUrl.value)
     // 使用原型配置的页面结构
     if (prototype.value.pageStructure && prototype.value.pageStructure.length > 0) {
       pageStructure.value = prototype.value.pageStructure
@@ -105,6 +114,8 @@ onMounted(async () => {
         }
       ]
     }
+  } else {
+    console.error('Preview - prototype is null or undefined')
   }
 })
 
@@ -144,22 +155,55 @@ const getPageIcon = (data) => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
 }
 
 .preview-header {
-  background: white;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 16px 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 20px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .header-content {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 32px;
+}
+
+.header-left {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #6b7280;
+}
+
+.back-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+  transform: translateX(-2px);
+}
+
+.back-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .info {
@@ -169,8 +213,19 @@ const getPageIcon = (data) => {
 }
 
 .info h2 {
-  font-size: 20px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
   margin: 0;
+}
+
+.category-badge {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .preview-container {
@@ -179,30 +234,30 @@ const getPageIcon = (data) => {
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
-  padding: 20px;
-  gap: 20px;
+  padding: 32px;
+  gap: 24px;
 }
 
 /* 左侧导航栏 */
 .sidebar-nav {
   width: 280px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
 .nav-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fafafa;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
 }
 
 .nav-header h3 {
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: #1a1a1a;
 }
 
 .nav-content {
@@ -214,33 +269,33 @@ const getPageIcon = (data) => {
 .tree-node {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
   width: 100%;
 }
 
 .tree-node:hover {
-  background: #f5f7fa;
+  background: #f3f4f6;
 }
 
 .tree-node.is-parent {
   font-weight: 600;
-  color: #303133;
+  color: #1a1a1a;
 }
 
 .tree-node.is-parent .node-icon {
-  color: #409eff;
+  color: #667eea;
 }
 
 .tree-node.is-leaf {
-  font-weight: 400;
-  color: #606266;
+  font-weight: 500;
+  color: #4b5563;
 }
 
 .tree-node.is-leaf .node-icon {
-  color: #909399;
+  color: #9ca3af;
 }
 
 .node-icon {
@@ -258,14 +313,14 @@ const getPageIcon = (data) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
+  min-width: 22px;
+  height: 22px;
   padding: 0 6px;
-  background: #e6f7ff;
-  color: #1890ff;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 100%);
+  color: #667eea;
+  border-radius: 11px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Element Plus Tree 样式覆盖 */
@@ -288,12 +343,12 @@ const getPageIcon = (data) => {
 }
 
 .nav-content :deep(.el-tree-node.is-current > .el-tree-node__content .tree-node) {
-  background: #e6f7ff;
-  color: #409eff;
+  background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 100%);
+  color: #667eea;
 }
 
 .nav-content :deep(.el-tree-node.is-current > .el-tree-node__content .tree-node .node-icon) {
-  color: #409eff;
+  color: #667eea;
 }
 
 .nav-content :deep(.el-tree-node__expand-icon) {
@@ -335,17 +390,17 @@ const getPageIcon = (data) => {
 .phone-frame {
   width: 390px;
   height: 844px;
-  background: #1a1a1a;
-  border-radius: 40px;
-  padding: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border-radius: 44px;
+  padding: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
   position: relative;
 }
 
 .phone-header {
   height: 44px;
   background: white;
-  border-radius: 28px 28px 0 0;
+  border-radius: 30px 30px 0 0;
   position: relative;
   overflow: hidden;
 }
@@ -380,7 +435,7 @@ const getPageIcon = (data) => {
 .phone-screen {
   height: calc(100% - 44px);
   background: white;
-  border-radius: 0 0 28px 28px;
+  border-radius: 0 0 30px 30px;
   overflow: hidden;
 }
 
