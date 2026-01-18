@@ -105,7 +105,8 @@ const form = reactive({
   category: '移动端',
   description: '',
   folderName: '',
-  coverImage: ''
+  coverImage: '',
+  pageStructure: null // 保存原有的页面结构
 })
 
 const rules = {
@@ -118,12 +119,18 @@ onMounted(async () => {
   if (route.params.id && route.params.id !== 'new') {
     isEdit.value = true
     const prototype = await store.getPrototype(route.params.id)
+    console.log('PrototypeForm - loaded prototype:', prototype)
+    console.log('PrototypeForm - prototype.pageStructure:', prototype?.pageStructure)
+
     if (prototype) {
       // 手动赋值，避免包含不需要的字段
       form.title = prototype.title || ''
       form.category = prototype.category || '移动端'
       form.description = prototype.description || ''
       form.coverImage = prototype.coverImage || ''
+      form.pageStructure = prototype.pageStructure || null // 保存页面结构
+
+      console.log('PrototypeForm - form.pageStructure after assignment:', form.pageStructure)
 
       // 如果有 filePath，提取文件名（不含扩展名）
       if (prototype.filePath) {
@@ -149,8 +156,16 @@ const submitForm = async () => {
       try {
         // 构建完整的 filePath，保持 .html 格式
         const submitData = {
-          ...form,
+          title: form.title,
+          category: form.category,
+          description: form.description,
+          coverImage: form.coverImage,
           filePath: `/prototypes/${form.folderName}.html`
+        }
+
+        // 如果是编辑模式且有 pageStructure，保留它
+        if (isEdit.value && form.pageStructure) {
+          submitData.pageStructure = form.pageStructure
         }
 
         console.log('PrototypeForm - submitData:', submitData)
@@ -161,8 +176,11 @@ const submitForm = async () => {
           await store.updatePrototype(route.params.id, submitData)
           ElMessage.success('更新成功')
         } else {
+          console.log('PrototypeForm - 开始创建原型')
           await store.createPrototype(submitData)
+          console.log('PrototypeForm - 创建原型完成，准备显示成功消息')
           ElMessage.success('创建成功')
+          console.log('PrototypeForm - 成功消息已显示')
         }
         router.push('/dashboard')
       } catch (error) {

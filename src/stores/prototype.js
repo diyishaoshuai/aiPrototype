@@ -39,7 +39,6 @@ export const usePrototypeStore = defineStore('prototype', {
       try {
         const response = await axios.post('/api/prototypes', data)
         this.prototypes.push(response.data)
-        ElMessage.success('创建原型成功')
         return response.data
       } catch (error) {
         console.error('创建原型失败:', error)
@@ -55,7 +54,6 @@ export const usePrototypeStore = defineStore('prototype', {
         if (index !== -1) {
           this.prototypes[index] = response.data
         }
-        ElMessage.success('更新原型成功')
         return response.data
       } catch (error) {
         console.error('更新原型失败:', error)
@@ -68,7 +66,6 @@ export const usePrototypeStore = defineStore('prototype', {
       try {
         await axios.delete(`/api/prototypes/${id}`)
         this.prototypes = this.prototypes.filter(p => p._id !== id)
-        ElMessage.success('删除原型成功')
       } catch (error) {
         console.error('删除原型失败:', error)
         ElMessage.error('删除原型失败，请稍后重试')
