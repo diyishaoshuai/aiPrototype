@@ -14,7 +14,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        'short-video-app': resolve(__dirname, 'prototypes/short-video-app.html')
+        'short-video-app': resolve(__dirname, 'prototypes/short-video-app.html'),
+        'xingqu-web': resolve(__dirname, 'prototypes/xingqu_web.html'),
+        'xingqu-h5': resolve(__dirname, 'prototypes/xingqu_h5.html')
       }
     }
   },

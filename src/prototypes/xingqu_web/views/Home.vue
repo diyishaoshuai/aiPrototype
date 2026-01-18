@@ -10,6 +10,7 @@
         <nav class="nav">
           <a href="#features" class="nav-item" @click.prevent="scrollToSection('features')">功能特色</a>
           <a href="#screenshots" class="nav-item" @click.prevent="scrollToSection('screenshots')">界面预览</a>
+          <a href="#version" class="nav-item" @click.prevent="scrollToSection('version')">版本信息</a>
         </nav>
       </div>
     </header>
@@ -111,6 +112,48 @@
       </div>
     </section>
 
+    <!-- 版本信息 -->
+    <section class="version-section" id="version">
+      <div class="section-container">
+        <h2 class="section-title">版本信息</h2>
+        <div class="version-content">
+          <!-- 当前版本 -->
+          <div class="current-version">
+            <div class="version-header" @click="toggleVersionHistory">
+              <div class="version-info">
+                <div class="version-number">当前版本: v{{ currentVersion.version }}</div>
+                <div class="version-date">{{ currentVersion.date }}</div>
+              </div>
+              <div class="version-toggle" :class="{ expanded: showVersionHistory }">
+                <span>▼</span>
+              </div>
+            </div>
+            <div class="version-description">{{ currentVersion.description }}</div>
+          </div>
+
+          <!-- 版本历史 -->
+          <div class="version-history" v-show="showVersionHistory">
+            <div
+              v-for="(version, index) in versionHistory"
+              :key="index"
+              class="version-item"
+            >
+              <div class="version-item-header">
+                <div class="version-item-number">v{{ version.version }}</div>
+                <div class="version-item-date">{{ version.date }}</div>
+              </div>
+              <div class="version-item-content">
+                <div class="version-item-title">{{ version.title }}</div>
+                <ul class="version-item-changes">
+                  <li v-for="(change, idx) in version.changes" :key="idx">{{ change }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 底部 -->
     <footer class="footer">
       <div class="footer-content">
@@ -130,6 +173,64 @@
 
 <script setup>
 import { ref } from 'vue'
+
+const showVersionHistory = ref(false)
+
+const currentVersion = ref({
+  version: '2.1.0',
+  date: '2025-01-15',
+  description: '优化用户体验，修复已知问题，提升系统稳定性'
+})
+
+const versionHistory = ref([
+  {
+    version: '2.1.0',
+    date: '2025-01-15',
+    title: '优化更新',
+    changes: [
+      '优化直播画质和流畅度',
+      '新增语音厅房间分类功能',
+      '优化短剧播放体验',
+      '修复部分已知问题'
+    ]
+  },
+  {
+    version: '2.0.0',
+    date: '2025-01-08',
+    title: '重大更新',
+    changes: [
+      '全新UI设计',
+      '新增动态广场功能',
+      '优化聊天系统',
+      '提升整体性能'
+    ]
+  },
+  {
+    version: '1.5.0',
+    date: '2024-12-25',
+    title: '功能增强',
+    changes: [
+      '新增短剧模块',
+      '优化直播互动功能',
+      '改进用户体验'
+    ]
+  },
+  {
+    version: '1.0.0',
+    date: '2024-12-01',
+    title: '首次发布',
+    changes: [
+      '基础直播功能',
+      '语音厅功能',
+      '用户系统',
+      '基础社交功能'
+    ]
+  }
+])
+
+const toggleVersionHistory = () => {
+  showVersionHistory.value = !showVersionHistory.value
+}
 
 const features = ref([
   {
@@ -273,6 +374,41 @@ const scrollToSection = (sectionId) => {
   padding: 120px 32px 80px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.hero-section::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+  }
 }
 
 .hero-content {
@@ -282,6 +418,23 @@ const scrollToSection = (sectionId) => {
   grid-template-columns: 1fr 1fr;
   gap: 60px;
   align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-text {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hero-title {
@@ -358,6 +511,18 @@ const scrollToSection = (sectionId) => {
   display: flex;
   justify-content: center;
   align-items: center;
+  animation: fadeInRight 0.8s ease-out 0.3s both;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .phone-frame {
@@ -367,6 +532,16 @@ const scrollToSection = (sectionId) => {
   border-radius: 40px;
   padding: 14px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  animation: phoneFloat 3s ease-in-out infinite;
+}
+
+@keyframes phoneFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .phone-screen {
@@ -429,17 +604,42 @@ const scrollToSection = (sectionId) => {
   padding: 40px 32px;
   border-radius: 16px;
   text-align: center;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
 }
 
 .feature-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.feature-card:hover::before {
+  transform: scaleX(1);
 }
 
 .feature-icon {
   font-size: 64px;
   margin-bottom: 24px;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .feature-title {
@@ -523,11 +723,292 @@ const scrollToSection = (sectionId) => {
   color: #333;
 }
 
+/* 版本信息 */
+.version-section {
+  padding: 80px 32px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.version-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite;
+}
+
+.version-section::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  right: -5%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(118, 75, 162, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+.version-content {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.current-version {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border-radius: 20px;
+  padding: 36px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.current-version::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+  background-size: 200% 100%;
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.current-version:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.18), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 16px;
+  user-select: none;
+}
+
+.version-info {
+  flex: 1;
+}
+
+.version-number {
+  font-size: 26px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.version-date {
+  font-size: 14px;
+  color: #8b92a8;
+  font-weight: 500;
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 12px;
+}
+
+.version-toggle {
+  font-size: 20px;
+  color: #667eea;
+  transition: all 0.3s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 50%;
+}
+
+.version-toggle:hover {
+  background: rgba(102, 126, 234, 0.15);
+  transform: scale(1.1);
+}
+
+.version-toggle.expanded {
+  transform: rotate(180deg);
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.version-toggle.expanded:hover {
+  transform: rotate(180deg) scale(1.1);
+}
+
+.version-description {
+  font-size: 15px;
+  color: #5a6376;
+  line-height: 1.8;
+  padding-top: 20px;
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  border-image-slice: 1;
+  position: relative;
+}
+
+.version-history {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.version-history::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(102, 126, 234, 0.4) 20%,
+    rgba(118, 75, 162, 0.4) 50%,
+    rgba(102, 126, 234, 0.4) 80%,
+    transparent 100%
+  );
+}
+
+.version-item {
+  padding: 28px 0;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.08);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.version-item:hover {
+  padding-left: 12px;
+  background: rgba(102, 126, 234, 0.02);
+  border-radius: 12px;
+  margin: 0 -12px;
+  padding-right: 12px;
+}
+
+.version-item:last-child {
+  border-bottom: none;
+}
+
+.version-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.version-item-number {
+  font-size: 19px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  padding-left: 24px;
+}
+
+.version-item-number::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.version-item-date {
+  font-size: 13px;
+  color: #8b92a8;
+  font-weight: 500;
+  padding: 3px 10px;
+  background: rgba(102, 126, 234, 0.06);
+  border-radius: 10px;
+}
+
+.version-item-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 14px;
+  letter-spacing: 0.2px;
+}
+
+.version-item-changes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.version-item-changes li {
+  font-size: 14px;
+  color: #5a6376;
+  line-height: 1.8;
+  padding-left: 24px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.version-item-changes li:hover {
+  color: #2d3748;
+  padding-left: 28px;
+}
+
+.version-item-changes li::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.version-item-changes li:hover::before {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
 /* 底部 */
 .footer {
-  background: #2d3748;
+  background: #1a1d29;
   color: white;
-  padding: 40px 32px 20px;
+  padding: 48px 32px 32px;
+  border-top: 1px solid rgba(102, 126, 234, 0.15);
 }
 
 .footer-content {
@@ -540,14 +1021,16 @@ const scrollToSection = (sectionId) => {
 }
 
 .company-name {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   margin-bottom: 12px;
+  color: #ffffff;
+  letter-spacing: 0.3px;
 }
 
 .company-address {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 20px;
   line-height: 1.6;
 }
@@ -556,44 +1039,292 @@ const scrollToSection = (sectionId) => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.footer-links span {
+  transition: color 0.2s ease;
 }
 
 .footer-links a {
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
-  transition: color 0.3s;
+  pointer-events: none;
+  cursor: default;
 }
 
-.footer-links a:hover {
-  color: white;
+.footer-links span:hover {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* 响应式设计 */
+
+/* 平板设备 (768px - 968px) */
 @media (max-width: 968px) {
+  .header-content {
+    padding: 0 24px;
+  }
+
+  .hero-section {
+    padding: 100px 24px 60px;
+  }
+
   .hero-content {
     grid-template-columns: 1fr;
+    gap: 40px;
     text-align: center;
+  }
+
+  .hero-title {
+    font-size: 40px;
+  }
+
+  .hero-desc {
+    font-size: 18px;
+  }
+
+  .hero-buttons {
+    justify-content: center;
+  }
+
+  .hero-stats {
+    justify-content: center;
+  }
+
+  .phone-frame {
+    width: 260px;
+    height: 520px;
+  }
+
+  .features-section,
+  .screenshots-section,
+  .version-section {
+    padding: 60px 24px;
   }
 
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
   }
 
   .screenshots-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .section-title {
+    font-size: 32px;
+  }
+
+  .footer {
+    padding: 40px 24px 28px;
   }
 }
 
+/* 手机设备 (最大 640px) */
 @media (max-width: 640px) {
+  /* 导航栏优化 */
+  .header {
+    padding: 12px 0;
+  }
+
+  .header-content {
+    padding: 0 16px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .logo-icon {
+    font-size: 28px;
+  }
+
   .nav {
     display: none;
   }
 
-  .features-grid,
+  /* Hero 区域优化 */
+  .hero-section {
+    padding: 80px 16px 50px;
+  }
+
+  .hero-content {
+    gap: 32px;
+  }
+
+  .hero-title {
+    font-size: 32px;
+    margin-bottom: 20px;
+    line-height: 1.3;
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    margin-bottom: 28px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .btn-ios,
+  .btn-android {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 15px;
+    justify-content: center;
+    min-height: 48px;
+  }
+
+  .hero-stats {
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .stat-number {
+    font-size: 28px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+  }
+
+  .phone-frame {
+    width: 220px;
+    height: 440px;
+  }
+
+  /* 功能特色优化 */
+  .features-section,
+  .screenshots-section,
+  .version-section {
+    padding: 50px 16px;
+  }
+
+  .section-title {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .section-desc {
+    font-size: 16px;
+    margin-bottom: 36px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .feature-card {
+    padding: 32px 24px;
+  }
+
+  .feature-icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+  }
+
+  .feature-title {
+    font-size: 20px;
+  }
+
+  .feature-desc {
+    font-size: 14px;
+  }
+
+  /* 界面预览优化 */
   .screenshots-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .screenshot-frame {
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .screenshot-label {
+    font-size: 15px;
+  }
+
+  /* 版本信息优化 */
+  .current-version,
+  .version-history {
+    padding: 24px;
+    border-radius: 16px;
+  }
+
+  .version-number {
+    font-size: 22px;
+  }
+
+  .version-date {
+    font-size: 13px;
+    padding: 3px 10px;
+  }
+
+  .version-toggle {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+
+  .version-description {
+    font-size: 14px;
+    padding-top: 16px;
+  }
+
+  .version-item {
+    padding: 20px 0;
+  }
+
+  .version-item-number {
+    font-size: 17px;
+    padding-left: 20px;
+  }
+
+  .version-item-number::before {
+    width: 10px;
+    height: 10px;
+  }
+
+  .version-item-date {
+    font-size: 12px;
+  }
+
+  .version-item-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .version-item-changes li {
+    font-size: 13px;
+    padding-left: 20px;
+  }
+
+  /* 底部优化 */
+  .footer {
+    padding: 36px 16px 24px;
+  }
+
+  .company-name {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  .company-address {
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .footer-links {
+    font-size: 12px;
+    gap: 6px;
   }
 }
 </style>
