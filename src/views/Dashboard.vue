@@ -10,7 +10,10 @@
               <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h1 class="page-title">AI Prototype Hub</h1>
+          <div class="title-group">
+            <h1 class="page-title">第一少帅的原型中心</h1>
+            <span class="page-subtitle">First General Prototype Hub</span>
+          </div>
         </div>
         <button class="create-btn" @click="createPrototype">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -110,6 +113,9 @@
         </div>
       </div>
     </main>
+
+    <!-- 上传对话框 -->
+    <UploadPrototype v-model="showUploadDialog" @success="handleUploadSuccess" />
   </div>
 </template>
 <script setup>
@@ -117,12 +123,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePrototypeStore } from '@/stores/prototype'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import UploadPrototype from '@/components/UploadPrototype.vue'
 
 const router = useRouter()
 const store = usePrototypeStore()
 
 const searchText = ref('')
 const selectedCategory = ref('')
+const showUploadDialog = ref(false)
 
 onMounted(() => {
   store.fetchPrototypes()
@@ -146,7 +154,11 @@ const selectCategory = (category) => {
 }
 
 const createPrototype = () => {
-  router.push('/prototype/new')
+  showUploadDialog.value = true
+}
+
+const handleUploadSuccess = () => {
+  store.fetchPrototypes()
 }
 
 const editPrototype = (id) => {
@@ -159,14 +171,28 @@ const previewPrototype = (id) => {
 
 const deletePrototype = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个原型吗？', '提示', {
+    const { value: password } = await ElMessageBox.prompt('请输入删除密码', '删除确认', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      inputType: 'password',
+      inputPlaceholder: '请输入密码',
+      inputValidator: (value) => {
+        if (!value) {
+          return '密码不能为空'
+        }
+        if (value !== 'admin123') {
+          return '密码错误'
+        }
+        return true
+      },
+      inputErrorMessage: '密码错误'
     })
-    await store.deletePrototype(id)
-    ElMessage.success('删除成功')
-    store.fetchPrototypes()
+
+    if (password === 'admin123') {
+      await store.deletePrototype(id)
+      ElMessage.success('删除成功')
+      store.fetchPrototypes()
+    }
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
@@ -210,6 +236,12 @@ const deletePrototype = async (id) => {
   gap: 16px;
 }
 
+.title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .logo-icon {
   width: 36px;
   height: 36px;
@@ -230,6 +262,15 @@ const deletePrototype = async (id) => {
   background-clip: text;
   margin: 0;
   letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .create-btn {

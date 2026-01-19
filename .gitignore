@@ -54,3 +54,6 @@ Thumbs.db
 
 # Playwright MCP (Cursor)
 .playwright-mcp/
+
+# Windows reserved names
+nul

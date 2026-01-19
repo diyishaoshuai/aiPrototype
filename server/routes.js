@@ -1,5 +1,7 @@
 import { app, Prototype, PORT, isMongoConnected } from './index.js'
 import mockData, { getShortVideoAppPageStructure } from './mockData.js'
+import { upload } from './upload.js'
+import { processPrototypeZip } from './prototypeProcessor.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -601,28 +603,54 @@ app.delete('/api/prototypes/:id', async (req, res) => {
   }
 })
 
-// 全局错误处理
-process.on('uncaughtException', (error) => {
-  console.error('❌ 未捕获的异常:', error)
-  console.error('错误堆栈:', error.stack)
-  // 不退出进程，继续运行
-})
+// 上传原型文件
+app.post('/api/prototypes/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: '请上传文件' })
+    }
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ 未处理的 Promise 拒绝:', reason)
-  console.error('Promise:', promise)
-  // 不退出进程，继续运行
-})
+    const { title, description, category, tags } = req.body
 
-// 启动服务器
-app.listen(PORT, () => {
-  console.log(`🚀 服务器运行在 http://localhost:${PORT}`)
-}).on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`❌ 端口 ${PORT} 已被占用`)
-  } else {
-    console.error('❌ 服务器启动失败:', error)
+    if (!title || !category) {
+      return res.status(400).json({ error: '标题和分类为必填项' })
+    }
+
+    console.log('📤 收到上传请求:', { title, category, file: req.file.originalname })
+
+    // 生成原型名称（用于文件夹名）
+    const prototypeName = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+
+    // 处理上传的 ZIP 文件
+    const result = await processPrototypeZip(req.file.path, prototypeName)
+    console.log('✅ 文件处理成功:', result)
+
+    // 创建数据库记录
+    const prototype = new Prototype({
+      title,
+      description: description || '',
+      category,
+      tags: tags ? tags.split(',').map(t => t.trim()).filter(t => t) : [],
+      filePath: result.filePath,
+      status: 'PUBLISHED',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    })
+
+    await prototype.save()
+    console.log('✅ 数据库记录创建成功:', prototype._id)
+
+    res.status(201).json({
+      success: true,
+      message: '原型上传成功',
+      prototype: prototype.toObject()
+    })
+  } catch (error) {
+    console.error('❌ 上传失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '上传失败'
+    })
   }
-  process.exit(1)
 })
 

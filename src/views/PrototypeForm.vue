@@ -45,22 +45,12 @@
             />
           </el-form-item>
 
-          <el-form-item label="文件名称" prop="folderName">
+          <el-form-item label="标签">
             <el-input
-              v-model="form.folderName"
-              placeholder="例如: short-video-app"
+              v-model="form.tags"
+              placeholder="多个标签用逗号分隔，如：社交,直播"
               size="large"
-            >
-              <template #prepend>/prototypes/</template>
-              <template #append>.html</template>
-            </el-input>
-            <div class="form-tip">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <span>输入文件名（不含扩展名），例如输入 "short-video-app" 将对应 /prototypes/short-video-app.html</span>
-            </div>
+            />
           </el-form-item>
 
           <el-form-item label="封面图片（可选）">
@@ -104,15 +94,14 @@ const form = reactive({
   title: '',
   category: '移动端',
   description: '',
-  folderName: '',
+  tags: '',
   coverImage: '',
   pageStructure: null // 保存原有的页面结构
 })
 
 const rules = {
   title: [{ required: true, message: '请输入原型标题', trigger: 'blur' }],
-  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
-  folderName: [{ required: true, message: '请输入文件夹名称', trigger: 'blur' }]
+  category: [{ required: true, message: '请选择分类', trigger: 'change' }]
 }
 
 onMounted(async () => {
@@ -127,24 +116,11 @@ onMounted(async () => {
       form.title = prototype.title || ''
       form.category = prototype.category || '移动端'
       form.description = prototype.description || ''
+      form.tags = prototype.tags ? prototype.tags.join(', ') : ''
       form.coverImage = prototype.coverImage || ''
       form.pageStructure = prototype.pageStructure || null // 保存页面结构
 
       console.log('PrototypeForm - form.pageStructure after assignment:', form.pageStructure)
-
-      // 如果有 filePath，提取文件名（不含扩展名）
-      if (prototype.filePath) {
-        if (prototype.filePath.startsWith('/prototypes/')) {
-          // 提取文件名，例如 /prototypes/short-video-app.html -> short-video-app
-          const fileName = prototype.filePath.replace('/prototypes/', '').replace('.html', '')
-          form.folderName = fileName
-        } else {
-          // 如果路径格式不同，尝试其他方式提取
-          const pathParts = prototype.filePath.split('/')
-          const lastPart = pathParts[pathParts.length - 1]
-          form.folderName = lastPart.replace('.html', '')
-        }
-      }
     }
   }
 })
@@ -154,13 +130,13 @@ const submitForm = async () => {
     if (valid) {
       submitting.value = true
       try {
-        // 构建完整的 filePath，保持 .html 格式
+        // 构建提交数据
         const submitData = {
           title: form.title,
           category: form.category,
           description: form.description,
-          coverImage: form.coverImage,
-          filePath: `/prototypes/${form.folderName}.html`
+          tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+          coverImage: form.coverImage
         }
 
         // 如果是编辑模式且有 pageStructure，保留它
@@ -170,19 +146,14 @@ const submitForm = async () => {
 
         console.log('PrototypeForm - submitData:', submitData)
         console.log('PrototypeForm - isEdit:', isEdit.value)
-        console.log('PrototypeForm - route.params.id:', route.params.id)
 
         if (isEdit.value) {
           await store.updatePrototype(route.params.id, submitData)
           ElMessage.success('更新成功')
+          router.push('/dashboard')
         } else {
-          console.log('PrototypeForm - 开始创建原型')
-          await store.createPrototype(submitData)
-          console.log('PrototypeForm - 创建原型完成，准备显示成功消息')
-          ElMessage.success('创建成功')
-          console.log('PrototypeForm - 成功消息已显示')
+          ElMessage.error('请通过上传功能创建新原型')
         }
-        router.push('/dashboard')
       } catch (error) {
         console.error('PrototypeForm - submit error:', error)
         ElMessage.error('操作失败')
