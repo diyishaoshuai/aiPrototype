@@ -17,8 +17,8 @@
     </header>
 
     <div class="preview-container">
-      <!-- 左侧导航栏 -->
-      <div class="sidebar-nav">
+      <!-- 左侧导航栏 - 仅当有页面结构时显示 -->
+      <div v-if="hasPageStructure" class="sidebar-nav">
         <div class="nav-header">
           <h3>页面结构</h3>
         </div>
@@ -61,7 +61,11 @@
       </div>
 
       <!-- 预览区域 - 根据类型显示不同样式 -->
-      <div class="preview-area" :class="{ 'is-mobile': prototype?.category === '移动端', 'is-web': prototype?.category === '网页端' }">
+      <div class="preview-area" :class="{ 
+        'is-mobile': prototype?.category === '移动端', 
+        'is-web': prototype?.category === '网页端',
+        'no-sidebar': !hasPageStructure
+      }">
         <!-- 移动端：手机框架 -->
         <div v-if="prototype?.category === '移动端'" class="phone-frame">
           <div class="phone-header">
@@ -112,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePrototypeStore } from '@/stores/prototype'
 import { Document, Folder, FolderOpened, HomeFilled, List, Filter, TrendCharts } from '@element-plus/icons-vue'
@@ -138,6 +142,26 @@ const treeProps = {
 // 页面结构数据
 const pageStructure = ref([])
 
+// 计算是否有页面结构（用于判断是否显示左侧导航栏）
+// 单页面原型（pageStructure 为空或只有一个主页面且没有子页面）不显示左侧导航
+const hasPageStructure = computed(() => {
+  if (!pageStructure.value || pageStructure.value.length === 0) {
+    return false
+  }
+  // 如果只有一个主页面且没有子页面，视为单页面
+  if (pageStructure.value.length === 1) {
+    const mainPage = pageStructure.value[0]
+    if (!mainPage.children || mainPage.children.length === 0) {
+      return false
+    }
+    // 检查子页面是否真实存在（有有效的 URL）
+    const hasValidChildren = mainPage.children.some(child => child.url)
+    return hasValidChildren
+  }
+  // 有多个页面或有多层结构，显示导航
+  return true
+})
+
 onMounted(async () => {
   console.log('Preview - route.params.id:', route.params.id)
   prototype.value = await store.getPrototype(route.params.id)
@@ -150,18 +174,13 @@ onMounted(async () => {
       const firstUrl = findFirstUrl(prototype.value.pageStructure)
       currentPageUrl.value = firstUrl || prototype.value.filePath
     } else {
-      // 如果没有配置页面结构，默认显示主页面
-      pageStructure.value = [
-        {
-          label: '主页面',
-          id: 'main',
-          url: prototype.value.filePath
-        }
-      ]
+      // 如果没有配置页面结构，说明是单页面原型，不设置 pageStructure
+      pageStructure.value = []
       currentPageUrl.value = prototype.value.filePath
     }
     console.log('Preview - currentPageUrl:', currentPageUrl.value)
     console.log('Preview - pageStructure:', pageStructure.value)
+    console.log('Preview - hasPageStructure:', hasPageStructure.value)
   } else {
     console.error('Preview - prototype is null or undefined')
   }
@@ -596,6 +615,16 @@ const getPageIcon = (data) => {
 .preview-area.is-web {
   padding: 0;
   padding-right: 32px;
+}
+
+/* 当没有左侧导航时，预览区域占满宽度 */
+.preview-area.no-sidebar {
+  width: 100%;
+  padding-right: 0;
+}
+
+.preview-area.no-sidebar.is-web {
+  padding-right: 0;
 }
 
 /* 网页端框架 */

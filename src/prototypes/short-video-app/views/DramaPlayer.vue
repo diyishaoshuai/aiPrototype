@@ -2,6 +2,7 @@
   <div
     ref="playerEl"
     class="player-page"
+    :class="{ 'landscape-mode': isLandscape }"
     :style="{ background: currentEpisode?.gradient || '#000' }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
@@ -17,8 +18,13 @@
       </div>
     </div>
 
+    <!-- 横屏模式顶部导航 -->
+    <div v-if="isLandscape" class="landscape-top-nav">
+      <button class="landscape-exit-btn" @click="exitLandscape">退出横屏</button>
+    </div>
+
     <!-- 视频区域：抖音式 3 屏轨道（prev/current/next）。轨道始终覆盖视口，滑动无缝衔接 -->
-    <div class="video-stage">
+    <div class="video-stage" :class="{ 'landscape-video': isLandscape }">
       <div
         class="video-track"
         :class="{ transitioning: isAnimating && !noTransition }"
@@ -82,10 +88,10 @@
         <div class="action-text">{{ formatCount(currentEpisode.comments) }}</div>
       </div>
 
-      <!-- 分享 -->
-      <div class="action-item" @click="share">
-        <div class="action-icon">📤</div>
-        <div class="action-text">分享</div>
+      <!-- 更多 -->
+      <div class="action-item" @click="showMoreMenu">
+        <div class="action-icon">⋯</div>
+        <div class="action-text">更多</div>
       </div>
     </div>
 
@@ -109,8 +115,8 @@
     <div 
       class="bottom-bar" 
       :class="{ 'speed-mode': isSpeedPlaying || isFullscreen }" 
-      :style="{ cursor: (isSpeedPlaying || isFullscreen) ? 'default' : 'pointer' }"
-      @click="!(isSpeedPlaying || isFullscreen) && (showEpisodeSheet = true)"
+      :style="{ cursor: (isSpeedPlaying || isFullscreen) ? 'pointer' : 'pointer' }"
+      @click="handleBottomBarClick"
     >
       <div class="bottom-bar-content">
         <template v-if="!isSpeedPlaying && !isFullscreen">
@@ -122,37 +128,227 @@
           <div class="speed-text-bottom">
             <span v-if="isSpeedPlaying && isFullscreen">x2 倍速 · 全屏模式</span>
             <span v-else-if="isSpeedPlaying">x2 倍速播放中</span>
-            <span v-else-if="isFullscreen">全屏模式</span>
+            <span v-else-if="isFullscreen" @click.stop="exitFullscreen">退出全屏模式</span>
           </div>
         </template>
       </div>
     </div>
 
-    <!-- 分享半屏弹窗 -->
-    <div v-if="showShareSheet && !isSpeedPlaying && !isFullscreen" class="share-sheet" @click.self="showShareSheet = false">
-      <div class="share-content" @click.stop>
+    <!-- 更多菜单弹窗 -->
+    <div v-if="showMoreMenuSheet && !isSpeedPlaying && !isFullscreen" class="more-menu-sheet" @click.self="showMoreMenuSheet = false">
+      <div class="more-menu-content" @click.stop>
         <!-- 顶部标题 -->
-        <div class="share-header">
-          <div class="share-title">分享到</div>
-          <div class="close-btn" @click="showShareSheet = false">✕</div>
+        <div class="more-menu-header">
+          <div class="more-menu-title">更多</div>
+          <div class="close-btn" @click="showMoreMenuSheet = false">✕</div>
         </div>
 
-        <!-- 分享选项 -->
-        <div class="share-options">
-          <div class="share-option" @click="shareToWechat">
-            <div class="share-icon wechat">💬</div>
-            <div class="share-label">微信好友</div>
+        <!-- 分享给好友区域 -->
+        <div class="share-to-friends-section">
+          <div class="share-to-friends-title">分享给好友</div>
+          <div class="friends-scroll-container">
+            <div class="friends-scroll-list">
+              <div
+                v-for="friend in displayedFriends"
+                :key="friend.id"
+                class="friend-item-horizontal"
+                @click="selectFriendForShare(friend)"
+              >
+                <div class="friend-avatar-horizontal">{{ friend.avatar }}</div>
+                <div class="friend-name-horizontal">{{ friend.name }}</div>
+              </div>
+              <div v-if="mutualFriends.length > 10" class="more-friends-item" @click="showMoreFriendsList = true">
+                <div class="more-friends-icon">+</div>
+                <div class="more-friends-text">更多好友</div>
+              </div>
+            </div>
           </div>
-          <div class="share-option" @click="shareToMoments">
-            <div class="share-icon moments">🌐</div>
-            <div class="share-label">朋友圈</div>
+        </div>
+
+        <!-- 倍速选择 -->
+        <div class="speed-section">
+          <div class="speed-title">倍速</div>
+          <div class="speed-options">
+            <div
+              v-for="speed in speedOptions"
+              :key="speed"
+              class="speed-option"
+              :class="{ active: playbackSpeed === speed }"
+              @click="selectSpeed(speed)"
+            >
+              {{ speed }}x
+            </div>
           </div>
-          <div class="share-option" @click="copyLink">
-            <div class="share-icon link">🔗</div>
-            <div class="share-label">复制链接</div>
+        </div>
+
+        <!-- 全屏和横屏按钮 -->
+        <div class="screen-controls">
+          <div class="screen-control-btn" @click="toggleFullscreenFromMenu">
+            <div class="screen-control-icon">⛶</div>
+            <div class="screen-control-label">{{ isFullscreen ? '退出全屏' : '全屏' }}</div>
+          </div>
+          <div class="screen-control-btn" @click="toggleLandscape">
+            <div class="screen-control-icon">🔄</div>
+            <div class="screen-control-label">{{ isLandscape ? '退出横屏' : '横屏' }}</div>
+          </div>
+        </div>
+
+        <!-- 功能键 -->
+        <div class="function-keys">
+          <div class="function-key" @click="toggleDanmaku">
+            <div class="function-key-icon" :class="{ active: danmakuEnabled }">💬</div>
+            <div class="function-key-label">{{ danmakuEnabled ? '关闭弹幕' : '开启弹幕' }}</div>
+          </div>
+          <div class="function-key" @click="openShareDialog">
+            <div class="function-key-icon">📤</div>
+            <div class="function-key-label">分享</div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 更多好友列表半窗 -->
+    <div v-if="showMoreFriendsList && !isSpeedPlaying && !isFullscreen" class="more-friends-sheet" @click.self="showMoreFriendsList = false">
+      <div class="more-friends-content" @click.stop>
+        <div class="more-friends-header">
+          <div class="more-friends-title">选择好友</div>
+          <div class="close-btn" @click="showMoreFriendsList = false">✕</div>
+        </div>
+        <div class="more-friends-list">
+          <div
+            v-for="friend in mutualFriends"
+            :key="friend.id"
+            class="more-friend-item"
+            @click="selectFriendForShare(friend)"
+          >
+            <div class="more-friend-avatar">{{ friend.avatar }}</div>
+            <div class="more-friend-name">{{ friend.name }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分享给好友弹窗（带视频封面和简介） -->
+    <div v-if="showShareToFriendDialog && !isSpeedPlaying && !isFullscreen" class="share-to-friend-dialog" @click.self="showShareToFriendDialog = false">
+      <div class="share-to-friend-content" @click.stop>
+        <!-- 视频封面和简介 -->
+        <div class="share-video-preview">
+          <div class="share-video-cover" :style="{ background: currentEpisode.gradient }">
+            {{ currentEpisode.emoji }}
+          </div>
+          <div class="share-video-info">
+            <div class="share-video-title">{{ dramaInfo.name }}</div>
+            <div class="share-video-desc">第{{ currentEpisode.episode }}集 · {{ currentEpisode.description }}</div>
+          </div>
+        </div>
+
+        <!-- 捎一句话输入框 -->
+        <div class="share-message-wrapper">
+          <textarea
+            v-model="shareToFriendMessage"
+            class="share-message-input"
+            placeholder="捎一句话..."
+            maxlength="100"
+            rows="3"
+          ></textarea>
+          <div class="share-message-char-count">{{ shareToFriendMessage.length }}/100</div>
+        </div>
+
+        <!-- 分享和取消按钮 -->
+        <div class="share-to-friend-footer">
+          <button class="share-cancel-btn" @click="showShareToFriendDialog = false">取消</button>
+          <button class="share-confirm-btn" @click="confirmShareToFriend">分享</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分享弹窗（带输入框） -->
+    <div v-if="showShareDialog && !isSpeedPlaying && !isFullscreen" class="share-dialog" @click.self="showShareDialog = false">
+      <div class="share-dialog-content" @click.stop>
+        <!-- 顶部标题 -->
+        <div class="share-dialog-header">
+          <div class="share-dialog-title">分享到</div>
+          <div class="close-btn" @click="showShareDialog = false">✕</div>
+        </div>
+
+        <!-- 输入框 -->
+        <div class="share-dialog-input-wrapper">
+          <textarea
+            v-model="shareMessage"
+            class="share-dialog-input"
+            placeholder="说点什么..."
+            maxlength="100"
+            rows="3"
+          ></textarea>
+          <div class="share-dialog-char-count">{{ shareMessage.length }}/100</div>
+        </div>
+
+        <!-- 分享选项 -->
+        <div class="share-dialog-options">
+          <div class="share-dialog-option" @click="shareToWechat">
+            <div class="share-dialog-icon wechat">💬</div>
+            <div class="share-dialog-label">微信好友</div>
+          </div>
+          <div class="share-dialog-option" @click="shareToMoments">
+            <div class="share-dialog-icon moments">🌐</div>
+            <div class="share-dialog-label">朋友圈</div>
+          </div>
+          <div class="share-dialog-option" @click="copyLink">
+            <div class="share-dialog-icon link">🔗</div>
+            <div class="share-dialog-label">复制链接</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分享给好友弹窗 -->
+    <div v-if="showShareToFriendsDialog && !isSpeedPlaying && !isFullscreen" class="share-friends-dialog" @click.self="showShareToFriendsDialog = false">
+      <div class="share-friends-content" @click.stop>
+        <!-- 顶部标题 -->
+        <div class="share-friends-header">
+          <div class="share-friends-title">分享给好友</div>
+          <div class="close-btn" @click="showShareToFriendsDialog = false">✕</div>
+        </div>
+
+        <!-- 输入框 -->
+        <div class="share-friends-input-wrapper">
+          <textarea
+            v-model="shareToFriendsMessage"
+            class="share-friends-input"
+            placeholder="说点什么..."
+            maxlength="100"
+            rows="3"
+          ></textarea>
+          <div class="share-friends-char-count">{{ shareToFriendsMessage.length }}/100</div>
+        </div>
+
+        <!-- 好友列表 -->
+        <div class="friends-list">
+          <div
+            v-for="friend in mutualFriends"
+            :key="friend.id"
+            class="friend-item"
+            :class="{ selected: selectedFriends.has(friend.id) }"
+            @click="toggleFriendSelection(friend.id)"
+          >
+            <div class="friend-avatar">{{ friend.avatar }}</div>
+            <div class="friend-name">{{ friend.name }}</div>
+            <div class="friend-check" v-if="selectedFriends.has(friend.id)">✓</div>
+          </div>
+        </div>
+
+        <!-- 发送按钮 -->
+        <div class="share-friends-footer">
+          <button class="share-friends-send-btn" @click="sendToFriends" :disabled="selectedFriends.size === 0">
+            发送 ({{ selectedFriends.size }})
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 双击点赞爱心动画 -->
+    <div v-if="showHeart" class="heart-animation" :style="heartStyle">
+      ❤️
     </div>
 
     <!-- 评论半屏弹窗 -->
@@ -300,30 +496,18 @@
         <!-- 选集列表 -->
         <div 
           ref="episodeListRef"
-          class="episode-list"
+          class="episode-list-grid"
           @scroll="handleEpisodeListScroll"
         >
           <div
             v-for="episode in filteredEpisodes"
             :key="episode.episode"
-            class="episode-item"
+            class="episode-item-grid"
             :class="{ playing: episode.episode === currentEpisode.episode }"
             @click="selectEpisode(episode)"
           >
-            <div class="episode-cover" :style="{ background: episode.gradient }">
-              {{ episode.emoji }}
-            </div>
-            <div class="episode-info">
-              <div class="episode-title-row">
-                <span class="episode-number">第{{ episode.episode }}集</span>
-                <span class="separator">|</span>
-                <span class="episode-brief">{{ episode.description }}</span>
-              </div>
-              <div class="episode-stats">
-                <span class="duration">{{ episode.duration }}</span>
-                <span class="play-count">{{ episode.playCount }}</span>
-                <span class="like-count">{{ episode.likes }}赞</span>
-              </div>
+            <div class="episode-number-box">
+              {{ episode.episode }}
             </div>
           </div>
         </div>
@@ -503,7 +687,7 @@ const DOUBLE_CLICK_DELAY = 300 // 双击间隔时间（ms）
 const DOUBLE_CLICK_DISTANCE = 50 // 双击位置允许的最大距离（px）
 
 const onPointerDown = (e) => {
-  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) return
+  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value || showMoreMenuSheet.value || showShareDialog.value || showShareToFriendsDialog.value || showMoreFriendsList.value || showShareToFriendDialog.value) return
   if (isAnimating.value) return
   if (e.isPrimary === false) return
 
@@ -528,7 +712,7 @@ const onPointerDown = (e) => {
 
 const onPointerMove = (e) => {
   if (!isPointerDown.value) return
-  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) return
+  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value || showMoreMenuSheet.value || showShareDialog.value || showShareToFriendsDialog.value || showMoreFriendsList.value || showShareToFriendDialog.value) return
 
   const dy = e.clientY - startY
   const dx = Math.abs(e.clientX - startX)
@@ -572,40 +756,40 @@ const onPointerUp = async (e) => {
   const currentX = e.clientX
   const currentY = e.clientY
   
-  // 检测双击
-  if (!moved) {
-    const timeSinceLastClick = currentTime - lastClickTime
-    const distanceFromLastClick = Math.sqrt(
-      Math.pow(currentX - lastClickX, 2) + Math.pow(currentY - lastClickY, 2)
-    )
-    
-    // 检查是否在可交互元素上
-    const target = e.target
-    const isInteractiveElement = target.closest('.bottom-bar, .progress-bar-container, .right-actions, .top-nav, .left-info, .speed-play-zone')
-    
-    if (!isInteractiveElement && 
-        timeSinceLastClick < DOUBLE_CLICK_DELAY && 
-        distanceFromLastClick < DOUBLE_CLICK_DISTANCE) {
-      // 检测到双击，切换全屏
-      toggleFullscreen(e)
-      lastClickTime = 0 // 重置，避免连续触发
-      isPointerDown.value = false
-      await resetToCenterNoTransition()
-      return
+    // 检测双击点赞
+    if (!moved) {
+      const timeSinceLastClick = currentTime - lastClickTime
+      const distanceFromLastClick = Math.sqrt(
+        Math.pow(currentX - lastClickX, 2) + Math.pow(currentY - lastClickY, 2)
+      )
+      
+      // 检查是否在可交互元素上
+      const target = e.target
+      const isInteractiveElement = target.closest('.bottom-bar, .progress-bar-container, .right-actions, .top-nav, .left-info, .speed-play-zone')
+      
+      if (!isInteractiveElement && 
+          timeSinceLastClick < DOUBLE_CLICK_DELAY && 
+          distanceFromLastClick < DOUBLE_CLICK_DISTANCE) {
+        // 检测到双击，触发点赞动画
+        triggerDoubleClickLike(e)
+        lastClickTime = 0 // 重置，避免连续触发
+        isPointerDown.value = false
+        await resetToCenterNoTransition()
+        return
+      } else {
+        // 记录点击信息，等待可能的第二次点击
+        lastClickTime = currentTime
+        lastClickX = currentX
+        lastClickY = currentY
+      }
     } else {
-      // 记录点击信息，等待可能的第二次点击
-      lastClickTime = currentTime
-      lastClickX = currentX
-      lastClickY = currentY
+      // 有移动，重置双击检测
+      lastClickTime = 0
     }
-  } else {
-    // 有移动，重置双击检测
-    lastClickTime = 0
-  }
   
   isPointerDown.value = false
 
-  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) {
+  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value || showMoreMenuSheet.value || showShareDialog.value || showShareToFriendsDialog.value || showMoreFriendsList.value || showShareToFriendDialog.value) {
     await resetToCenterNoTransition()
     return
   }
@@ -680,7 +864,53 @@ const replyToComment = ref(null)
 // 回复展开状态：记录每个评论的回复是否展开
 const expandedReplies = ref(new Set())
 
-// 分享相关状态
+// 更多菜单相关状态
+const showMoreMenuSheet = ref(false)
+const showShareDialog = ref(false)
+const showShareToFriendsDialog = ref(false)
+const showMoreFriendsList = ref(false)
+const showShareToFriendDialog = ref(false)
+const shareMessage = ref('')
+const shareToFriendsMessage = ref('')
+const shareToFriendMessage = ref('')
+const selectedFriend = ref(null)
+const playbackSpeed = ref(1.0)
+const danmakuEnabled = ref(false)
+const isLandscape = ref(false)
+
+// 倍速选项
+const speedOptions = [0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
+
+// 互相关注的好友列表（模拟数据，至少15个用于测试）
+const mutualFriends = ref([
+  { id: 1, name: '好友A', avatar: '👤' },
+  { id: 2, name: '好友B', avatar: '👥' },
+  { id: 3, name: '好友C', avatar: '👨' },
+  { id: 4, name: '好友D', avatar: '👩' },
+  { id: 5, name: '好友E', avatar: '😊' },
+  { id: 6, name: '好友F', avatar: '🎭' },
+  { id: 7, name: '好友G', avatar: '🎨' },
+  { id: 8, name: '好友H', avatar: '🎪' },
+  { id: 9, name: '好友I', avatar: '🎬' },
+  { id: 10, name: '好友J', avatar: '🎯' },
+  { id: 11, name: '好友K', avatar: '🎲' },
+  { id: 12, name: '好友L', avatar: '🎸' },
+  { id: 13, name: '好友M', avatar: '🎹' },
+  { id: 14, name: '好友N', avatar: '🎺' },
+  { id: 15, name: '好友O', avatar: '🎻' }
+])
+
+// 显示的好友（最多10个）
+const displayedFriends = computed(() => {
+  return mutualFriends.value.slice(0, 10)
+})
+
+// 双击点赞相关状态
+const showHeart = ref(false)
+const heartStyle = ref({})
+let heartAnimationTimer = null
+
+// 分享相关状态（保留用于兼容）
 const showShareSheet = ref(false)
 
 // 集数切换提示
@@ -979,29 +1209,160 @@ const heartbreakComment = (comment, parentComment = null) => {
   }, 1000)
 }
 
-// 分享
+// 显示更多菜单
+const showMoreMenu = () => {
+  showMoreMenuSheet.value = true
+}
+
+// 打开分享弹窗
+const openShareDialog = () => {
+  showMoreMenuSheet.value = false
+  shareMessage.value = ''
+  showShareDialog.value = true
+}
+
+// 选择好友进行分享
+const selectFriendForShare = (friend) => {
+  selectedFriend.value = friend
+  shareToFriendMessage.value = ''
+  showMoreFriendsList.value = false
+  showShareToFriendDialog.value = true
+}
+
+// 确认分享给好友
+const confirmShareToFriend = () => {
+  if (!selectedFriend.value) return
+  alert(`已分享给 ${selectedFriend.value.name}：${shareToFriendMessage.value || '（无留言）'}`)
+  showShareToFriendDialog.value = false
+  shareToFriendMessage.value = ''
+  selectedFriend.value = null
+}
+
+// 选择倍速
+const selectSpeed = (speed) => {
+  playbackSpeed.value = speed
+  // 这里可以添加实际的倍速切换逻辑
+}
+
+// 切换横屏模式
+const toggleLandscape = () => {
+  isLandscape.value = true
+  showMoreMenuSheet.value = false
+  // 进入视频横屏模式（只旋转视频播放区域，不是整个app）
+}
+
+// 退出横屏模式
+const exitLandscape = () => {
+  isLandscape.value = false
+}
+
+// 退出全屏模式
+const exitFullscreen = () => {
+  isFullscreen.value = false
+}
+
+// 处理底部栏点击
+const handleBottomBarClick = () => {
+  if (isSpeedPlaying || isFullscreen) {
+    // 如果是全屏模式，点击退出全屏
+    if (isFullscreen) {
+      exitFullscreen()
+    }
+    // 如果是倍速模式，不做任何操作（或者可以添加退出倍速的逻辑）
+    return
+  }
+  // 正常模式，显示选集
+  showEpisodeSheet.value = true
+}
+
+// 从菜单切换全屏
+const toggleFullscreenFromMenu = () => {
+  isFullscreen.value = !isFullscreen.value
+  showMoreMenuSheet.value = false
+}
+
+// 切换弹幕
+const toggleDanmaku = () => {
+  danmakuEnabled.value = !danmakuEnabled.value
+  showMoreMenuSheet.value = false
+  // 这里可以添加实际的弹幕开关逻辑
+}
+
+// 双击点赞动画
+const triggerDoubleClickLike = async (e) => {
+  // 如果还没点赞，先点赞
+  if (!currentEpisode.value.isLiked) {
+    toggleLike()
+  } else {
+    // 如果已点赞，增加点赞数
+    currentEpisode.value.likes++
+  }
+  
+  // 清除之前的定时器和动画
+  if (heartAnimationTimer) {
+    clearTimeout(heartAnimationTimer)
+    heartAnimationTimer = null
+  }
+  
+  // 先隐藏之前的爱心（如果有）
+  showHeart.value = false
+  
+  // 等待 DOM 更新
+  await nextTick()
+  
+  // 计算点击位置
+  const rect = playerEl.value.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  
+  // 设置爱心位置（不设置 transform，让动画完全控制）
+  heartStyle.value = {
+    left: `${x}px`,
+    top: `${y}px`
+  }
+  
+  // 显示爱心并触发动画
+  showHeart.value = true
+  
+  // 动画结束后隐藏（确保在动画完成后才隐藏）
+  heartAnimationTimer = setTimeout(async () => {
+    showHeart.value = false
+    // 清空样式，确保下次显示时重新计算
+    heartStyle.value = {}
+    // 强制触发重排，确保元素被移除
+    await nextTick()
+  }, 1300) // 稍微长一点，确保动画完全结束
+}
+
+// 分享（保留用于兼容）
 const share = () => {
-  showShareSheet.value = true
+  openShareDialog()
 }
 
 // 分享到微信
 const shareToWechat = () => {
-  alert('分享到微信好友')
-  showShareSheet.value = false
+  const message = shareMessage.value ? `\n${shareMessage.value}` : ''
+  alert(`分享到微信好友${message}`)
+  showShareDialog.value = false
+  shareMessage.value = ''
 }
 
 // 分享到朋友圈
 const shareToMoments = () => {
-  alert('分享到朋友圈')
-  showShareSheet.value = false
+  const message = shareMessage.value ? `\n${shareMessage.value}` : ''
+  alert(`分享到朋友圈${message}`)
+  showShareDialog.value = false
+  shareMessage.value = ''
 }
 
 // 复制链接
 const copyLink = () => {
   const link = `https://example.com/drama/${dramaInfo.value.id}/episode/${currentEpisode.value.episode}`
-  navigator.clipboard.writeText(link).then(() => {
+  const message = shareMessage.value ? `\n${shareMessage.value}` : ''
+  navigator.clipboard.writeText(`${link}${message}`).then(() => {
     alert('链接已复制到剪贴板')
-    showShareSheet.value = false
+    showShareDialog.value = false
+    shareMessage.value = ''
   }).catch(() => {
     alert('复制失败，请手动复制')
   })
@@ -1139,7 +1500,7 @@ let speedPlayActivated = false // 是否已激活倍速播放
 let speedPlayTimer = null // 倍速激活定时器
 
 const onSpeedPlayDown = (e) => {
-  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value) return
+  if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value || showMoreMenuSheet.value || showShareDialog.value || showShareToFriendsDialog.value || showMoreFriendsList.value || showShareToFriendDialog.value) return
   if (isAnimating.value) return
   if (e.isPrimary === false) return
   
@@ -1159,6 +1520,11 @@ const onSpeedPlayDown = (e) => {
     if (showEpisodeSheet.value) showEpisodeSheet.value = false
     if (showCommentSheet.value) showCommentSheet.value = false
     if (showShareSheet.value) showShareSheet.value = false
+    if (showMoreMenuSheet.value) showMoreMenuSheet.value = false
+    if (showShareDialog.value) showShareDialog.value = false
+    if (showShareToFriendsDialog.value) showShareToFriendsDialog.value = false
+    if (showMoreFriendsList.value) showMoreFriendsList.value = false
+    if (showShareToFriendDialog.value) showShareToFriendDialog.value = false
     
     speedPlayZoneActive.value = true
     speedPlayActivated = false // 重置激活状态
@@ -1191,6 +1557,11 @@ watch(isFullscreen, (newVal) => {
     if (showEpisodeSheet.value) showEpisodeSheet.value = false
     if (showCommentSheet.value) showCommentSheet.value = false
     if (showShareSheet.value) showShareSheet.value = false
+    if (showMoreMenuSheet.value) showMoreMenuSheet.value = false
+    if (showShareDialog.value) showShareDialog.value = false
+    if (showShareToFriendsDialog.value) showShareToFriendsDialog.value = false
+    if (showMoreFriendsList.value) showMoreFriendsList.value = false
+    if (showShareToFriendDialog.value) showShareToFriendDialog.value = false
   }
 })
 
@@ -1277,6 +1648,11 @@ const toggleFullscreen = (e) => {
   if (showEpisodeSheet.value) showEpisodeSheet.value = false
   if (showCommentSheet.value) showCommentSheet.value = false
   if (showShareSheet.value) showShareSheet.value = false
+  if (showMoreMenuSheet.value) showMoreMenuSheet.value = false
+  if (showShareDialog.value) showShareDialog.value = false
+  if (showShareToFriendsDialog.value) showShareToFriendsDialog.value = false
+  if (showMoreFriendsList.value) showMoreFriendsList.value = false
+  if (showShareToFriendDialog.value) showShareToFriendDialog.value = false
   
   // 切换全屏模式
   isFullscreen.value = !isFullscreen.value
@@ -1296,6 +1672,37 @@ const toggleFullscreen = (e) => {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  transition: transform 0.3s ease;
+}
+
+/* 横屏模式 - 只旋转视频区域 */
+.player-page.landscape-mode {
+  /* 横屏模式下，隐藏竖屏UI */
+}
+
+.player-page.landscape-mode .top-nav,
+.player-page.landscape-mode .left-info,
+.player-page.landscape-mode .right-actions,
+.player-page.landscape-mode .bottom-bar {
+  display: none;
+}
+
+/* 横屏模式下显示进度条 */
+.player-page.landscape-mode .progress-bar-container {
+  display: block;
+  z-index: 22;
+}
+
+.video-stage.landscape-video {
+  transform: rotate(90deg);
+  transform-origin: center center;
+  position: absolute;
+  width: 100vh;
+  height: 100vw;
+  top: 50%;
+  left: 50%;
+  margin-left: -50vh;
+  margin-top: -50vw;
 }
 
 /* 顶部导航栏 */
@@ -1320,6 +1727,35 @@ const toggleFullscreen = (e) => {
   cursor: pointer;
   padding: 8px;
   margin-right: 12px;
+}
+
+/* 横屏模式顶部导航 */
+.landscape-top-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 21;
+}
+
+.landscape-exit-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: all 0.3s;
+}
+
+.landscape-exit-btn:active {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .drama-info-top {
@@ -2203,5 +2639,889 @@ const toggleFullscreen = (e) => {
 .share-label {
   font-size: 14px;
   color: #666;
+}
+
+/* 更多菜单弹窗 */
+.more-menu-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.more-menu-content {
+  width: 100%;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  padding-bottom: 20px;
+  animation: slideUp 0.3s ease;
+}
+
+.more-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.more-menu-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.more-menu-options {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 12px;
+}
+
+.more-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.more-menu-option:active {
+  background: #f5f5f5;
+}
+
+.more-menu-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: #f0f0f0;
+}
+
+.more-menu-icon.share-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.more-menu-icon.speed-icon {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.more-menu-icon.fullscreen-icon {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.more-menu-icon.danmaku-icon {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.more-menu-icon.danmaku-icon.active {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.more-menu-icon.friends-icon {
+  background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+.more-menu-label {
+  font-size: 16px;
+  color: #333;
+  flex: 1;
+}
+
+/* 分享弹窗（带输入框） */
+.share-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-dialog-content {
+  width: 90%;
+  max-width: 400px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.share-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.share-dialog-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.share-dialog-input-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.share-dialog-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.share-dialog-input:focus {
+  border-color: #667eea;
+}
+
+.share-dialog-char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 12px;
+  color: #999;
+}
+
+.share-dialog-options {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px 0;
+}
+
+.share-dialog-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.share-dialog-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.share-dialog-icon.wechat {
+  background: linear-gradient(135deg, #07c160 0%, #00d976 100%);
+}
+
+.share-dialog-icon.moments {
+  background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
+}
+
+.share-dialog-icon.link {
+  background: linear-gradient(135deg, #722ed1 0%, #b37feb 100%);
+}
+
+.share-dialog-label {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 分享给好友弹窗 */
+.share-friends-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-friends-content {
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  animation: scaleIn 0.3s ease;
+}
+
+.share-friends-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.share-friends-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.share-friends-input-wrapper {
+  position: relative;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.share-friends-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.share-friends-input:focus {
+  border-color: #667eea;
+}
+
+.share-friends-char-count {
+  position: absolute;
+  bottom: 24px;
+  right: 32px;
+  font-size: 12px;
+  color: #999;
+}
+
+.friends-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+  max-height: 300px;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.friend-item:active {
+  background: #f5f5f5;
+}
+
+.friend-item.selected {
+  background: #e8edff;
+}
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.friend-name {
+  flex: 1;
+  font-size: 16px;
+  color: #333;
+}
+
+.friend-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #667eea;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.share-friends-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.share-friends-send-btn {
+  width: 100%;
+  height: 44px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.share-friends-send-btn:hover {
+  background: #5568d3;
+}
+
+.share-friends-send-btn:disabled {
+  background: #c0c4cc;
+  cursor: not-allowed;
+}
+
+/* 双击点赞爱心动画 - 仿抖音效果 */
+.heart-animation {
+  position: absolute;
+  font-size: 60px;
+  pointer-events: none;
+  z-index: 1000;
+  will-change: transform, opacity;
+  animation: heartFloat 1.2s ease-out forwards;
+  transform-origin: center center;
+  /* 确保动画结束后元素不可见 */
+  animation-fill-mode: forwards;
+}
+
+@keyframes heartFloat {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0.8;
+  }
+  15% {
+    transform: translate(-50%, -60px) scale(1.1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -100px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -180px) scale(0.6);
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* 确保动画结束后元素完全隐藏 */
+.heart-animation[style*="display: none"],
+.heart-animation:not([style*="display"]) {
+  display: none !important;
+}
+
+/* 选集列表网格样式 */
+.episode-list-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  padding: 12px 16px;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.episode-list-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.episode-item-grid {
+  aspect-ratio: 1;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.episode-item-grid:active {
+  transform: scale(0.95);
+}
+
+.episode-item-grid.playing .episode-number-box {
+  border: 2px solid #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.episode-number-box {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+}
+
+.episode-item-grid.playing .episode-number-box {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* 更多菜单新样式 */
+.share-to-friends-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.share-to-friends-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.friends-scroll-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+
+.friends-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.friends-scroll-list {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.friend-item-horizontal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 60px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.friend-item-horizontal:active {
+  transform: scale(0.95);
+}
+
+.friend-avatar-horizontal {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.friend-name-horizontal {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-friends-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 60px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.more-friends-item:active {
+  transform: scale(0.95);
+}
+
+.more-friends-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #999;
+  border: 2px dashed #ccc;
+}
+
+.more-friends-text {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+/* 倍速选择 */
+.speed-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.speed-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.speed-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.speed-options::-webkit-scrollbar {
+  display: none;
+}
+
+.speed-option {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.speed-option.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.speed-option:active {
+  transform: scale(0.95);
+}
+
+/* 全屏和横屏控制 */
+.screen-controls {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.screen-control-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.screen-control-btn:active {
+  transform: scale(0.95);
+  background: #e8e8e8;
+}
+
+.screen-control-icon {
+  font-size: 24px;
+}
+
+.screen-control-label {
+  font-size: 14px;
+  color: #333;
+}
+
+/* 功能键 */
+.function-keys {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.function-key {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.function-key:active {
+  transform: scale(0.95);
+  background: #e8e8e8;
+}
+
+.function-key-icon {
+  font-size: 24px;
+  transition: filter 0.2s;
+}
+
+.function-key-icon.active {
+  filter: brightness(1.2);
+}
+
+.function-key-label {
+  font-size: 14px;
+  color: #333;
+}
+
+/* 更多好友列表半窗 */
+.more-friends-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  display: flex;
+  align-items: flex-end;
+}
+
+.more-friends-content {
+  width: 100%;
+  max-height: 60vh;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+.more-friends-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.more-friends-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.more-friends-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+}
+
+.more-friend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.more-friend-item:active {
+  background: #f5f5f5;
+}
+
+.more-friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.more-friend-name {
+  font-size: 16px;
+  color: #333;
+}
+
+/* 分享给好友弹窗（带视频封面） */
+.share-to-friend-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-to-friend-content {
+  width: 90%;
+  max-width: 400px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  animation: scaleIn 0.3s ease;
+}
+
+.share-video-preview {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.share-video-cover {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.share-video-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.share-video-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-video-desc {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.share-message-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.share-message-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.share-message-input:focus {
+  border-color: #667eea;
+}
+
+.share-message-char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 12px;
+  color: #999;
+}
+
+.share-to-friend-footer {
+  display: flex;
+  gap: 12px;
+}
+
+.share-cancel-btn,
+.share-confirm-btn {
+  flex: 1;
+  height: 44px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.share-cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.share-cancel-btn:active {
+  background: #e8e8e8;
+}
+
+.share-confirm-btn {
+  background: #667eea;
+  color: white;
+}
+
+.share-confirm-btn:active {
+  background: #5568d3;
 }
 </style>

@@ -221,6 +221,33 @@ function deletePrototypeProject(filePath) {
   }
 }
 
+// 规范化单页面原型（xingqu_web 和 xingqu_h5），将 pageStructure 设置为空
+function normalizeSinglePagePrototype(proto) {
+  if (!proto) return { changed: false, proto }
+
+  const filePath = proto.filePath
+  const isSinglePage = filePath && (
+    filePath.includes('xingqu_web') ||
+    filePath.includes('xingqu_h5')
+  )
+
+  if (!isSinglePage) return { changed: false, proto }
+
+  const current = Array.isArray(proto.pageStructure) ? proto.pageStructure : []
+  // 如果 pageStructure 不为空，需要清空它
+  if (current.length > 0) {
+    return {
+      changed: true,
+      proto: {
+        ...proto,
+        pageStructure: [] // 单页面原型不需要页面结构
+      }
+    }
+  }
+
+  return { changed: false, proto }
+}
+
 function normalizeShortVideoAppPrototype(proto) {
   // 只修正"短视频应用"这个原型（Mongo / mockData 都适用）
   // 主要基于 filePath 判断，因为 filePath 更稳定，不会因为改名而改变
@@ -352,7 +379,14 @@ app.get('/api/prototypes', async (req, res) => {
     const fixed = await Promise.all(
       prototypes.map(async p => {
         const raw = p.toObject ? p.toObject() : p
-        const { changed, proto } = normalizeShortVideoAppPrototype(raw)
+        // 先处理单页面原型
+        let { changed, proto } = normalizeSinglePagePrototype(raw)
+        // 如果不是单页面，再处理短剧应用
+        if (!changed) {
+          const result = normalizeShortVideoAppPrototype(raw)
+          changed = result.changed
+          proto = result.proto
+        }
         if (changed && proto?._id) {
           try {
             await Prototype.findByIdAndUpdate(
@@ -392,10 +426,46 @@ app.get('/api/prototypes/:id', async (req, res) => {
       return res.status(404).json({ error: '原型不存在' })
     }
     const raw = prototype.toObject ? prototype.toObject() : prototype
-    const { changed, proto } = normalizeShortVideoAppPrototype(raw)
+    // 先处理单页面原型
+    let { changed, proto } = normalizeSinglePagePrototype(raw)
+    // 如果不是单页面，再处理短剧应用
+    if (!changed) {
+      const result = normalizeShortVideoAppPrototype(raw)
+      changed = result.changed
+      proto = result.proto
+    }
+    
+    // 强制修复单页面原型：如果 filePath 匹配但 pageStructure 不为空，清空它
+    const filePath = raw.filePath
+    const isSinglePage = filePath && (
+      filePath.includes('xingqu_web') ||
+      filePath.includes('xingqu_h5')
+    )
+    
+    if (isSinglePage) {
+      const current = Array.isArray(raw.pageStructure) ? raw.pageStructure : []
+      if (current.length > 0) {
+        console.log('Force fixing pageStructure for single-page prototype')
+        try {
+          const updated = await Prototype.findByIdAndUpdate(
+            raw._id,
+            {
+              pageStructure: [],
+              updatedAt: Date.now()
+            },
+            { new: true }
+          )
+          console.log('PageStructure force fixed for single-page prototype')
+          const updatedRaw = updated.toObject ? updated.toObject() : updated
+          return res.json({ ...updatedRaw, pageStructure: [] })
+        } catch (err) {
+          console.error('Failed to force fix pageStructure for single-page:', err)
+          return res.json({ ...raw, pageStructure: [] }) // 即使保存失败，也返回空结构
+        }
+      }
+    }
     
     // 强制修复：如果 filePath 匹配但结构不完整，直接使用完整结构
-    const filePath = raw.filePath
     const isShortVideoApp = filePath && (
       filePath === '/prototypes/short-video-app.html' ||
       filePath.startsWith('/prototypes/short-video-app.html')
@@ -502,8 +572,16 @@ app.put('/api/prototypes/:id', async (req, res) => {
       updateData.pageStructure = currentData.pageStructure
     }
     
-    // 如果 filePath 是 short-video-app.html，确保 pageStructure 正确
+    // 如果 filePath 是单页面原型（xingqu_web 或 xingqu_h5），确保 pageStructure 为空
     if (updateData.filePath && (
+      updateData.filePath.includes('xingqu_web') ||
+      updateData.filePath.includes('xingqu_h5')
+    )) {
+      // 单页面原型不需要页面结构
+      updateData.pageStructure = []
+    }
+    // 如果 filePath 是 short-video-app.html，确保 pageStructure 正确
+    else if (updateData.filePath && (
       updateData.filePath === '/prototypes/short-video-app.html' ||
       updateData.filePath.startsWith('/prototypes/short-video-app.html')
     )) {
@@ -545,7 +623,14 @@ app.put('/api/prototypes/:id', async (req, res) => {
     
     // 返回前再次规范化，确保数据正确
     const raw = prototype.toObject ? prototype.toObject() : prototype
-    const { changed, proto } = normalizeShortVideoAppPrototype(raw)
+    // 先处理单页面原型
+    let { changed, proto } = normalizeSinglePagePrototype(raw)
+    // 如果不是单页面，再处理短剧应用
+    if (!changed) {
+      const result = normalizeShortVideoAppPrototype(raw)
+      changed = result.changed
+      proto = result.proto
+    }
     if (changed && proto?._id) {
       try {
         await Prototype.findByIdAndUpdate(
