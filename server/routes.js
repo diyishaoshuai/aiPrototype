@@ -375,32 +375,35 @@ app.get('/api/prototypes', async (req, res) => {
 
     const prototypes = await Prototype.find(query).sort({ createdAt: -1 })
 
-    // 修正旧的 pageStructure（必要时写回）
-    const fixed = await Promise.all(
-      prototypes.map(async p => {
-        const raw = p.toObject ? p.toObject() : p
-        // 先处理单页面原型
-        let { changed, proto } = normalizeSinglePagePrototype(raw)
-        // 如果不是单页面，再处理短剧应用
-        if (!changed) {
-          const result = normalizeShortVideoAppPrototype(raw)
-          changed = result.changed
-          proto = result.proto
-        }
-        if (changed && proto?._id) {
+    // 修正旧的 pageStructure（异步后台写回，不阻塞响应）
+    const fixed = prototypes.map(p => {
+      const raw = p.toObject ? p.toObject() : p
+      // 先处理单页面原型
+      let { changed, proto } = normalizeSinglePagePrototype(raw)
+      // 如果不是单页面，再处理短剧应用
+      if (!changed) {
+        const result = normalizeShortVideoAppPrototype(raw)
+        changed = result.changed
+        proto = result.proto
+      }
+      // 如果需要修复，异步后台写回数据库（不阻塞响应）
+      if (changed && proto?._id) {
+        // 使用 setImmediate 或 setTimeout 异步执行，不阻塞当前响应
+        setImmediate(async () => {
           try {
             await Prototype.findByIdAndUpdate(
               proto._id,
               { filePath: proto.filePath, pageStructure: proto.pageStructure, updatedAt: Date.now() },
               { new: false }
             )
-          } catch {
-            // 忽略写回失败，至少保证本次响应正确
+          } catch (err) {
+            // 忽略写回失败，不影响响应
+            console.error(`修复原型 ${proto._id} 的 pageStructure 失败:`, err.message)
           }
-        }
-        return proto
-      })
-    )
+        })
+      }
+      return proto
+    })
 
     res.json(fixed)
   } catch (error) {

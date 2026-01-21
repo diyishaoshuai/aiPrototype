@@ -10,7 +10,7 @@
     @pointercancel="onPointerCancel"
   >
     <!-- 顶部导航栏 -->
-    <div v-show="!isSpeedPlaying && !isFullscreen" class="top-nav">
+    <div v-show="!isSpeedPlaying && !isFullscreen && !isLandscape" class="top-nav">
       <button class="back-btn" @click="goBack">←</button>
       <div class="drama-info-top">
         <div class="drama-name">{{ dramaInfo.name }}</div>
@@ -19,12 +19,65 @@
     </div>
 
     <!-- 横屏模式顶部导航 -->
-    <div v-if="isLandscape" class="landscape-top-nav">
-      <button class="landscape-exit-btn" @click="exitLandscape">退出横屏</button>
-    </div>
+    <transition name="fade">
+      <div v-if="isLandscape && showLandscapeControls" class="landscape-top-nav" @click.stop>
+        <div class="landscape-left">
+          <button class="landscape-back-btn" @click.stop="exitLandscape">←</button>
+          <div class="landscape-drama-info">
+            <span class="landscape-drama-name">{{ dramaInfo.name }}</span>
+            <span class="landscape-episode">第{{ currentEpisode.episode }}集</span>
+          </div>
+        </div>
+        <button class="landscape-more-btn" @click.stop="showLandscapeMoreMenu">⋯</button>
+      </div>
+    </transition>
+
+    <!-- 横屏模式底部控制栏 -->
+    <transition name="fade">
+      <div v-if="isLandscape && showLandscapeControls" class="landscape-bottom-controls" @click.stop>
+        <!-- 进度条 -->
+        <div class="landscape-progress-wrapper">
+          <div class="landscape-time-display">
+            <span class="current-time">{{ formatTime(currentTime) }}</span>
+            <span class="separator">/</span>
+            <span class="total-time">{{ formatTime(totalTime) }}</span>
+          </div>
+          <div class="landscape-progress-bar" @click="handleLandscapeProgressClick">
+            <div class="landscape-progress-track">
+              <div class="landscape-progress-played" :style="{ width: progress + '%' }"></div>
+              <div class="landscape-progress-dot" :style="{ left: progress + '%' }"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 控制按钮 -->
+        <div class="landscape-controls-row">
+          <button class="landscape-control-btn" @click="togglePlayPause">
+            <span class="control-icon">{{ isPlaying ? '⏸' : '▶' }}</span>
+          </button>
+          <button class="landscape-control-btn" @click="showLandscapeSpeedMenu">
+            <span class="control-text">{{ playbackSpeed }}x</span>
+          </button>
+          <button class="landscape-control-btn" @click="showLandscapeQualityMenu">
+            <span class="control-text">{{ currentQuality }}</span>
+          </button>
+          <button class="landscape-control-btn" @click="toggleDanmaku">
+            <span class="control-icon" :class="{ active: danmakuEnabled }">💬</span>
+          </button>
+          <button class="landscape-control-btn" @click="toggleFullscreenFromLandscape">
+            <span class="control-icon">⛶</span>
+          </button>
+        </div>
+      </div>
+    </transition>
 
     <!-- 视频区域：抖音式 3 屏轨道（prev/current/next）。轨道始终覆盖视口，滑动无缝衔接 -->
-    <div class="video-stage" :class="{ 'landscape-video': isLandscape }">
+    <div 
+      class="video-stage" 
+      :class="{ 'landscape-video': isLandscape, 'fullscreen-video': isFullscreen }"
+      @click="handleVideoClick"
+      @touchstart="handleVideoClick"
+    >
       <div
         class="video-track"
         :class="{ transitioning: isAnimating && !noTransition }"
@@ -35,6 +88,8 @@
             : 'none'
         }"
         @transitionend="onTrackTransitionEnd"
+        @click.stop="handleVideoClick"
+        @touchstart.stop="handleVideoClick"
       >
         <!-- prev -->
         <div class="video-slide">
@@ -111,26 +166,67 @@
       @pointercancel="onSpeedPlayUp"
     ></div>
 
+    <!-- 全屏模式顶部导航 -->
+    <transition name="fade">
+      <div v-if="isFullscreen && showFullscreenControls && !isLandscape" class="fullscreen-top-nav" @click.stop>
+        <button class="fullscreen-back-btn" @click="exitFullscreen">←</button>
+        <div class="fullscreen-drama-info">
+          <span class="fullscreen-drama-name">{{ dramaInfo.name }}</span>
+          <span class="fullscreen-episode">第{{ currentEpisode.episode }}集</span>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 全屏模式底部控制栏 -->
+    <transition name="fade">
+      <div v-if="isFullscreen && showFullscreenControls && !isLandscape" class="fullscreen-bottom-controls" @click.stop>
+        <!-- 进度条 -->
+        <div class="fullscreen-progress-wrapper">
+          <div class="fullscreen-time-display">
+            <span class="current-time">{{ formatTime(currentTime) }}</span>
+            <span class="separator">/</span>
+            <span class="total-time">{{ formatTime(totalTime) }}</span>
+          </div>
+          <div class="fullscreen-progress-bar" @click="handleFullscreenProgressClick">
+            <div class="fullscreen-progress-track">
+              <div class="fullscreen-progress-played" :style="{ width: progress + '%' }"></div>
+              <div class="fullscreen-progress-dot" :style="{ left: progress + '%' }"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 控制按钮 -->
+        <div class="fullscreen-controls-row">
+          <button class="fullscreen-control-btn" @click="togglePlayPause">
+            <span class="control-icon">{{ isPlaying ? '⏸' : '▶' }}</span>
+          </button>
+          <button class="fullscreen-control-btn" @click="showFullscreenSpeedMenu">
+            <span class="control-text">{{ playbackSpeed }}x</span>
+          </button>
+          <button class="fullscreen-control-btn" @click="showFullscreenQualityMenu">
+            <span class="control-text">{{ currentQuality }}</span>
+          </button>
+          <button class="fullscreen-control-btn" @click="toggleDanmaku">
+            <span class="control-icon" :class="{ active: danmakuEnabled }">💬</span>
+          </button>
+          <button class="fullscreen-control-btn" @click="exitFullscreen">
+            <span class="control-icon">⛶</span>
+          </button>
+        </div>
+      </div>
+    </transition>
+
     <!-- 底部短剧信息栏 -->
     <div 
+      v-show="!isSpeedPlaying && !isFullscreen && !isLandscape"
       class="bottom-bar" 
-      :class="{ 'speed-mode': isSpeedPlaying || isFullscreen }" 
-      :style="{ cursor: (isSpeedPlaying || isFullscreen) ? 'pointer' : 'pointer' }"
+      :style="{ cursor: 'pointer' }"
       @click="handleBottomBarClick"
     >
       <div class="bottom-bar-content">
-        <template v-if="!isSpeedPlaying && !isFullscreen">
-          <div class="drama-title">{{ dramaInfo.name }}</div>
-          <div class="total-episodes">共{{ dramaInfo.totalEpisodes }}集</div>
-          <div class="arrow-icon">▲</div>
-        </template>
-        <template v-else>
-          <div class="speed-text-bottom">
-            <span v-if="isSpeedPlaying && isFullscreen">x2 倍速 · 全屏模式</span>
-            <span v-else-if="isSpeedPlaying">x2 倍速播放中</span>
-            <span v-else-if="isFullscreen" @click.stop="exitFullscreen">退出全屏模式</span>
-          </div>
-        </template>
+        <div class="drama-title">{{ dramaInfo.name }}</div>
+        <div class="total-episodes">共{{ dramaInfo.totalEpisodes }}集</div>
+        <div class="arrow-icon">▲</div>
       </div>
     </div>
 
@@ -513,6 +609,62 @@
         </div>
       </div>
     </div>
+
+    <!-- 横屏模式右侧更多菜单 -->
+    <div v-if="showLandscapeMoreMenuSheet && isLandscape" class="landscape-more-menu-sheet" @click.self="showLandscapeMoreMenuSheet = false">
+      <div class="landscape-more-menu-content" @click.stop>
+        <div class="landscape-more-menu-header">
+          <div class="landscape-more-menu-title">更多</div>
+          <div class="close-btn" @click="showLandscapeMoreMenuSheet = false">✕</div>
+        </div>
+
+        <!-- 倍速选择 -->
+        <div class="landscape-menu-section">
+          <div class="landscape-section-title">倍速</div>
+          <div class="landscape-speed-options">
+            <div
+              v-for="speed in speedOptions"
+              :key="speed"
+              class="landscape-speed-option"
+              :class="{ active: playbackSpeed === speed }"
+              @click="selectSpeed(speed)"
+            >
+              {{ speed }}x
+            </div>
+          </div>
+        </div>
+
+        <!-- 画质选择 -->
+        <div class="landscape-menu-section">
+          <div class="landscape-section-title">画质</div>
+          <div class="landscape-quality-options">
+            <div
+              v-for="quality in qualityOptions"
+              :key="quality"
+              class="landscape-quality-option"
+              :class="{ active: currentQuality === quality }"
+              @click="selectQuality(quality)"
+            >
+              {{ quality }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 功能键 -->
+        <div class="landscape-menu-section">
+          <div class="landscape-function-keys">
+            <div class="landscape-function-key" @click="toggleDanmaku">
+              <div class="landscape-function-key-icon" :class="{ active: danmakuEnabled }">💬</div>
+              <div class="landscape-function-key-label">{{ danmakuEnabled ? '关闭弹幕' : '开启弹幕' }}</div>
+            </div>
+            <div class="landscape-function-key" @click="openShareDialog">
+              <div class="landscape-function-key-icon">📤</div>
+              <div class="landscape-function-key-label">分享</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -691,6 +843,26 @@ const onPointerDown = (e) => {
   if (isAnimating.value) return
   if (e.isPrimary === false) return
 
+  // 在横屏或全屏模式下，检查是否点击在控制栏上
+  if (isLandscape.value || isFullscreen.value) {
+    const target = e.target
+    const isControlElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar')
+    if (isControlElement) {
+      // 如果点击在控制栏上，不处理滑动逻辑
+      return
+    }
+    // 在横屏/全屏模式下，允许点击视频区域来显示控件
+    e.currentTarget?.setPointerCapture?.(e.pointerId)
+    isPointerDown.value = true
+    moved = false
+    startY = e.clientY
+    startX = e.clientX
+    startTranslateY = trackTranslateY.value
+    lastY = startY
+    lastT = performance.now()
+    return
+  }
+
   // 检查点击目标是否为可交互元素（按钮、进度条、底部栏等）
   const target = e.target
   const isInteractiveElement = target.closest('.bottom-bar, .progress-bar-container, .right-actions, .top-nav, .left-info, .speed-play-zone')
@@ -713,6 +885,21 @@ const onPointerDown = (e) => {
 const onPointerMove = (e) => {
   if (!isPointerDown.value) return
   if (showEpisodeSheet.value || showCommentSheet.value || showShareSheet.value || showMoreMenuSheet.value || showShareDialog.value || showShareToFriendsDialog.value || showMoreFriendsList.value || showShareToFriendDialog.value) return
+
+  // 在横屏或全屏模式下，允许小幅移动（可能是手抖），但不触发滑动
+  if (isLandscape.value || isFullscreen.value) {
+    const dy = Math.abs(e.clientY - startY)
+    const dx = Math.abs(e.clientX - startX)
+    // 如果移动距离很小，不标记为移动，允许单击
+    if (dy < 10 && dx < 10) {
+      return
+    }
+    // 如果移动距离较大，标记为移动，但不触发滑动（横屏/全屏模式下不允许滑动切换集数）
+    if (dy > 10 || dx > 10) {
+      moved = true
+    }
+    return
+  }
 
   const dy = e.clientY - startY
   const dx = Math.abs(e.clientX - startX)
@@ -756,7 +943,28 @@ const onPointerUp = async (e) => {
   const currentX = e.clientX
   const currentY = e.clientY
   
-    // 检测双击点赞
+  // 在横屏或全屏模式下，单击屏幕显示控件（不处理双击点赞）
+  if (isLandscape.value || isFullscreen.value) {
+    if (!moved) {
+      // 检查是否在可交互元素上
+      const target = e.target
+      const isInteractiveElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar')
+      
+      if (!isInteractiveElement) {
+        // 单击屏幕，显示控件
+        if (isLandscape.value) {
+          handleLandscapeVideoClick()
+        } else if (isFullscreen.value) {
+          handleFullscreenVideoClick()
+        }
+      }
+    }
+    isPointerDown.value = false
+    await resetToCenterNoTransition()
+    return
+  }
+  
+    // 检测双击点赞（仅在非横屏/全屏模式下）
     if (!moved) {
       const timeSinceLastClick = currentTime - lastClickTime
       const distanceFromLastClick = Math.sqrt(
@@ -880,6 +1088,94 @@ const isLandscape = ref(false)
 
 // 倍速选项
 const speedOptions = [0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
+
+// 画质选项
+const qualityOptions = ['流畅', '标清', '高清', '超清', '蓝光']
+const currentQuality = ref('高清')
+
+// 播放状态
+const isPlaying = ref(true)
+
+// 横屏模式菜单状态
+const showLandscapeMoreMenuSheet = ref(false)
+const showLandscapeControls = ref(true)
+let landscapeControlsTimer = null
+
+// 全屏模式控制栏状态
+const showFullscreenControls = ref(true)
+let fullscreenControlsTimer = null
+
+// 视频点击处理（显示/隐藏控制栏）
+const handleVideoClick = (e) => {
+  // 如果更多菜单已打开，不处理视频点击
+  if (showLandscapeMoreMenuSheet.value || showMoreMenuSheet.value) {
+    return
+  }
+
+  // 如果点击的是控制栏或其他交互元素，不处理
+  const target = e.target
+  const isControlElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar, .landscape-progress-wrapper, .fullscreen-progress-wrapper, .right-actions, .left-info, .top-nav, .bottom-bar, .landscape-more-btn, .landscape-back-btn, .fullscreen-back-btn, .landscape-more-menu-sheet, .landscape-more-menu-content, .more-menu-sheet')
+
+  if (isControlElement) {
+    return
+  }
+
+  // 在横屏或全屏模式下，单击屏幕显示控件
+  if (isLandscape.value) {
+    e.preventDefault()
+    e.stopPropagation()
+    handleLandscapeVideoClick()
+  } else if (isFullscreen.value) {
+    e.preventDefault()
+    e.stopPropagation()
+    handleFullscreenVideoClick()
+  }
+}
+
+// 横屏模式视频点击处理（显示/隐藏控制栏）
+const handleLandscapeVideoClick = () => {
+  if (!isLandscape.value) return
+  // 单击屏幕总是显示所有控件
+  showLandscapeControls.value = true
+  
+  // 清除之前的定时器
+  clearTimeout(landscapeControlsTimer)
+  // 3秒后自动隐藏
+  landscapeControlsTimer = setTimeout(() => {
+    showLandscapeControls.value = false
+  }, 3000)
+}
+
+// 全屏模式视频点击处理（显示/隐藏控制栏）
+const handleFullscreenVideoClick = () => {
+  if (!isFullscreen.value) return
+  // 单击屏幕总是显示所有控件
+  showFullscreenControls.value = true
+  
+  // 清除之前的定时器
+  clearTimeout(fullscreenControlsTimer)
+  // 3秒后自动隐藏
+  fullscreenControlsTimer = setTimeout(() => {
+    showFullscreenControls.value = false
+  }, 3000)
+}
+
+// 格式化时间
+const formatTime = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '00:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+// 当前播放时间和总时长（模拟数据）
+const currentTime = ref(0)
+const totalTime = ref(180) // 3分钟
+
+// 监听进度变化，更新当前时间
+watch(progress, (newProgress) => {
+  currentTime.value = (newProgress / 100) * totalTime.value
+})
 
 // 互相关注的好友列表（模拟数据，至少15个用于测试）
 const mutualFriends = ref([
@@ -1241,24 +1537,93 @@ const confirmShareToFriend = () => {
 // 选择倍速
 const selectSpeed = (speed) => {
   playbackSpeed.value = speed
-  // 这里可以添加实际的倍速切换逻辑
 }
 
-// 切换横屏模式
+// 切换横屏模式 - 跳转到独立的横屏播放页面
 const toggleLandscape = () => {
-  isLandscape.value = true
   showMoreMenuSheet.value = false
-  // 进入视频横屏模式（只旋转视频播放区域，不是整个app）
+  // 跳转到横屏播放页面，传递当前剧集信息
+  router.push({
+    path: `/drama/${route.params.id}/landscape`,
+    query: { episode: currentEpisode.value.episode }
+  })
 }
 
 // 退出横屏模式
 const exitLandscape = () => {
   isLandscape.value = false
+  showLandscapeMoreMenuSheet.value = false
+  showLandscapeControls.value = true
+  clearTimeout(landscapeControlsTimer)
+}
+
+// 显示横屏更多菜单
+const showLandscapeMoreMenu = (e) => {
+  if (e) {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  showLandscapeMoreMenuSheet.value = true
+  // 显示更多菜单时，保持控制栏显示
+  showLandscapeControls.value = true
+  clearTimeout(landscapeControlsTimer)
+}
+
+// 显示横屏倍速菜单
+const showLandscapeSpeedMenu = () => {
+  showLandscapeMoreMenuSheet.value = true
+}
+
+// 显示横屏画质菜单
+const showLandscapeQualityMenu = () => {
+  showLandscapeMoreMenuSheet.value = true
+}
+
+// 选择画质
+const selectQuality = (quality) => {
+  currentQuality.value = quality
+  showLandscapeMoreMenuSheet.value = false
+}
+
+// 切换播放/暂停
+const togglePlayPause = () => {
+  isPlaying.value = !isPlaying.value
 }
 
 // 退出全屏模式
 const exitFullscreen = () => {
   isFullscreen.value = false
+  showFullscreenControls.value = true
+  clearTimeout(fullscreenControlsTimer)
+}
+
+// 全屏模式进度条点击处理
+const handleFullscreenProgressClick = (e) => {
+  e.stopPropagation() // 阻止事件冒泡到视频区域
+  const rect = e.currentTarget.getBoundingClientRect()
+  const clickX = e.clientX - rect.left
+  const newProgress = (clickX / rect.width) * 100
+  progress.value = Math.max(0, Math.min(100, newProgress))
+  // 更新当前时间
+  currentTime.value = (progress.value / 100) * totalTime.value
+  // 显示控制栏并重置隐藏定时器
+  showFullscreenControls.value = true
+  clearTimeout(fullscreenControlsTimer)
+  fullscreenControlsTimer = setTimeout(() => {
+    showFullscreenControls.value = false
+  }, 3000)
+}
+
+// 全屏模式显示倍速菜单
+const showFullscreenSpeedMenu = () => {
+  // 可以打开一个菜单选择倍速
+  showLandscapeMoreMenuSheet.value = true
+}
+
+// 全屏模式显示画质菜单
+const showFullscreenQualityMenu = () => {
+  // 可以打开一个菜单选择画质
+  showLandscapeMoreMenuSheet.value = true
 }
 
 // 处理底部栏点击
@@ -1279,6 +1644,16 @@ const handleBottomBarClick = () => {
 const toggleFullscreenFromMenu = () => {
   isFullscreen.value = !isFullscreen.value
   showMoreMenuSheet.value = false
+  if (isFullscreen.value) {
+    showFullscreenControls.value = true
+    // 3秒后自动隐藏控制栏
+    clearTimeout(fullscreenControlsTimer)
+    fullscreenControlsTimer = setTimeout(() => {
+      showFullscreenControls.value = false
+    }, 3000)
+  } else {
+    clearTimeout(fullscreenControlsTimer)
+  }
 }
 
 // 切换弹幕
@@ -1470,6 +1845,32 @@ const handleProgressClick = (e) => {
   progress.value = Math.max(0, Math.min(100, newProgress))
 }
 
+// 横屏模式进度条点击处理
+const handleLandscapeProgressClick = (e) => {
+  e.stopPropagation() // 阻止事件冒泡到视频区域
+  const rect = e.currentTarget.getBoundingClientRect()
+  const clickX = e.clientX - rect.left
+  const newProgress = (clickX / rect.width) * 100
+  progress.value = Math.max(0, Math.min(100, newProgress))
+  // 更新当前时间
+  currentTime.value = (progress.value / 100) * totalTime.value
+  // 显示控制栏并重置隐藏定时器
+  showLandscapeControls.value = true
+  clearTimeout(landscapeControlsTimer)
+  landscapeControlsTimer = setTimeout(() => {
+    showLandscapeControls.value = false
+  }, 3000)
+}
+
+// 从横屏模式切换全屏
+const toggleFullscreenFromLandscape = () => {
+  isFullscreen.value = !isFullscreen.value
+  if (isFullscreen.value) {
+    // 进入全屏时，退出横屏模式
+    exitLandscape()
+  }
+}
+
 const handleProgressTouchStart = (e) => {
   progressTouching = true
   e.stopPropagation()
@@ -1562,6 +1963,27 @@ watch(isFullscreen, (newVal) => {
     if (showShareToFriendsDialog.value) showShareToFriendsDialog.value = false
     if (showMoreFriendsList.value) showMoreFriendsList.value = false
     if (showShareToFriendDialog.value) showShareToFriendDialog.value = false
+    // 显示控制栏并设置自动隐藏
+    showFullscreenControls.value = true
+    clearTimeout(fullscreenControlsTimer)
+    fullscreenControlsTimer = setTimeout(() => {
+      showFullscreenControls.value = false
+    }, 3000)
+  } else {
+    clearTimeout(fullscreenControlsTimer)
+  }
+})
+
+// 监听横屏模式变化
+watch(isLandscape, (newVal) => {
+  if (newVal) {
+    showLandscapeControls.value = true
+    clearTimeout(landscapeControlsTimer)
+    landscapeControlsTimer = setTimeout(() => {
+      showLandscapeControls.value = false
+    }, 3000)
+  } else {
+    clearTimeout(landscapeControlsTimer)
   }
 })
 
@@ -1675,34 +2097,230 @@ const toggleFullscreen = (e) => {
   transition: transform 0.3s ease;
 }
 
-/* 横屏模式 - 只旋转视频区域 */
+/* 横屏模式 - 不使用旋转，直接全屏显示 */
 .player-page.landscape-mode {
-  /* 横屏模式下，隐藏竖屏UI */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 9999;
+  background: #000;
 }
 
 .player-page.landscape-mode .top-nav,
 .player-page.landscape-mode .left-info,
 .player-page.landscape-mode .right-actions,
-.player-page.landscape-mode .bottom-bar {
+.player-page.landscape-mode .bottom-bar,
+.player-page.landscape-mode .progress-bar-container {
   display: none;
 }
 
-/* 横屏模式下显示进度条 */
-.player-page.landscape-mode .progress-bar-container {
-  display: block;
-  z-index: 22;
+.video-stage.landscape-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  cursor: pointer;
+  /* 确保可以接收点击事件 */
+  pointer-events: auto;
+  /* 设置较低的 z-index，确保更多菜单(z-index: 2000)在其上方 */
+  z-index: 1;
 }
 
-.video-stage.landscape-video {
-  transform: rotate(90deg);
-  transform-origin: center center;
+.video-stage.fullscreen-video {
   position: absolute;
-  width: 100vh;
-  height: 100vw;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  /* 确保可以接收点击事件 */
+  pointer-events: auto;
+}
+
+/* 全屏模式样式 */
+.player-page:has(.fullscreen-video) {
+  background: #000;
+}
+
+/* 全屏模式顶部导航 */
+.fullscreen-top-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 25;
+  pointer-events: none;
+}
+
+.fullscreen-top-nav > * {
+  pointer-events: auto;
+}
+
+.fullscreen-back-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.fullscreen-drama-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fullscreen-drama-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+}
+
+.fullscreen-episode {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 全屏模式底部控制栏 */
+.fullscreen-bottom-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0) 100%);
+  z-index: 25;
+  padding: 16px 20px 20px;
+  pointer-events: none;
+  /* 确保控制栏可见 */
+  will-change: opacity;
+}
+
+.fullscreen-bottom-controls > * {
+  pointer-events: auto;
+}
+
+/* 全屏模式进度条区域 */
+.fullscreen-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fullscreen-time-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: white;
+  font-size: 14px;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.fullscreen-time-display .current-time {
+  color: white;
+}
+
+.fullscreen-time-display .separator {
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 2px;
+}
+
+.fullscreen-time-display .total-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.fullscreen-progress-bar {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
+  position: relative;
+}
+
+.fullscreen-progress-track {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  position: relative;
+  overflow: visible;
+}
+
+.fullscreen-progress-played {
+  height: 100%;
+  background: #ff4757;
+  border-radius: 2px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: width 0.1s ease;
+}
+
+.fullscreen-progress-dot {
+  position: absolute;
   top: 50%;
-  left: 50%;
-  margin-left: -50vh;
-  margin-top: -50vw;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #ff4757;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  transition: left 0.1s ease;
+}
+
+/* 全屏模式控制按钮行 */
+.fullscreen-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.fullscreen-control-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+  min-width: 44px;
+}
+
+.fullscreen-control-btn:active {
+  opacity: 0.7;
+}
+
+.fullscreen-control-btn .control-icon {
+  font-size: 24px;
+  color: white;
+}
+
+.fullscreen-control-btn .control-icon.active {
+  color: #ff4757;
+}
+
+.fullscreen-control-btn .control-text {
+  font-size: 14px;
+  color: white;
+  white-space: nowrap;
 }
 
 /* 顶部导航栏 */
@@ -1738,24 +2356,83 @@ const toggleFullscreen = (e) => {
   height: 60px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
-  z-index: 21;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 25;
+  pointer-events: none;
 }
 
-.landscape-exit-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  font-size: 14px;
+.landscape-top-nav > * {
+  pointer-events: auto;
+  /* 确保所有子元素都可以点击 */
+  position: relative;
+  z-index: 26;
+}
+
+.landscape-top-nav .landscape-more-btn {
+  z-index: 27;
+}
+
+.landscape-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landscape-back-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
   color: white;
   cursor: pointer;
-  padding: 8px 16px;
-  transition: all 0.3s;
+  padding: 8px;
 }
 
-.landscape-exit-btn:active {
-  background: rgba(255, 255, 255, 0.3);
+.landscape-drama-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.landscape-drama-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+}
+
+.landscape-episode {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.landscape-more-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  z-index: 27;
+  position: relative;
+  /* 确保按钮可以点击 */
+  pointer-events: auto;
+  /* 添加点击反馈 */
+  transition: opacity 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landscape-more-btn:hover {
+  opacity: 0.8;
+}
+
+.landscape-more-btn:active {
+  opacity: 0.6;
+  transform: scale(0.95);
 }
 
 .drama-info-top {
@@ -1988,6 +2665,150 @@ const toggleFullscreen = (e) => {
   height: 100%;
   background: white;
   transition: width 0.1s ease;
+}
+
+/* 横屏模式底部控制栏 */
+.landscape-controls {
+  display: none;
+}
+
+/* 横屏模式底部控制栏 */
+.landscape-bottom-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0) 100%);
+  z-index: 25;
+  padding: 16px 20px 20px;
+  pointer-events: none;
+  /* 确保控制栏可见 */
+  will-change: opacity;
+}
+
+.landscape-bottom-controls > * {
+  pointer-events: auto;
+}
+
+/* 横屏模式进度条区域 */
+.landscape-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.landscape-time-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: white;
+  font-size: 14px;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.landscape-time-display .current-time {
+  color: white;
+}
+
+.landscape-time-display .separator {
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 2px;
+}
+
+.landscape-time-display .total-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.landscape-progress-bar {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
+  position: relative;
+}
+
+.landscape-progress-track {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  position: relative;
+  overflow: visible;
+}
+
+.landscape-progress-played {
+  height: 100%;
+  background: #ff4757;
+  border-radius: 2px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: width 0.1s ease;
+}
+
+.landscape-progress-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #ff4757;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  transition: left 0.1s ease;
+}
+
+/* 横屏模式控制按钮行 */
+.landscape-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.landscape-control-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+  min-width: 44px;
+}
+
+.landscape-control-btn:active {
+  opacity: 0.7;
+}
+
+.landscape-control-btn .control-icon {
+  font-size: 24px;
+  color: white;
+}
+
+.landscape-control-btn .control-icon.active {
+  color: #ff4757;
+}
+
+.landscape-control-btn .control-text {
+  font-size: 14px;
+  color: white;
+  white-space: nowrap;
+}
+
+/* 淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* 左侧倍速播放检测区域 */
@@ -3210,14 +4031,9 @@ const toggleFullscreen = (e) => {
 
 .speed-options {
   display: flex;
-  gap: 12px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.speed-options::-webkit-scrollbar {
-  display: none;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between;
 }
 
 .speed-option {
@@ -3523,5 +4339,133 @@ const toggleFullscreen = (e) => {
 
 .share-confirm-btn:active {
   background: #5568d3;
+}
+
+/* 横屏模式右侧更多菜单 */
+.landscape-more-menu-sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
+.landscape-more-menu-content {
+  width: 320px;
+  background: white;
+  height: 100%;
+  animation: slideInRight 0.3s ease;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.landscape-more-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.landscape-more-menu-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.landscape-menu-section {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.landscape-section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.landscape-speed-options,
+.landscape-quality-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.landscape-speed-option,
+.landscape-quality-option {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  pointer-events: auto;
+}
+
+.landscape-speed-option:hover,
+.landscape-quality-option:hover {
+  background: #e8e8e8;
+}
+
+.landscape-speed-option:active,
+.landscape-quality-option:active {
+  background: #ddd;
+}
+
+.landscape-speed-option.active,
+.landscape-quality-option.active {
+  background: #667eea;
+  color: white;
+}
+
+.landscape-function-keys {
+  display: flex;
+  gap: 12px;
+}
+
+.landscape-function-key {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.landscape-function-key:active {
+  background: #e8e8e8;
+}
+
+.landscape-function-key-icon {
+  font-size: 24px;
+}
+
+.landscape-function-key-icon.active {
+  color: #667eea;
+}
+
+.landscape-function-key-label {
+  font-size: 12px;
+  color: #666;
 }
 </style>

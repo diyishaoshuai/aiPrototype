@@ -352,6 +352,7 @@ const getPageIcon = (data) => {
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+  pointer-events: none;
 }
 
 .preview-header {
@@ -361,6 +362,7 @@ const getPageIcon = (data) => {
   padding: 20px 0;
   position: sticky;
   top: 0;
+  pointer-events: auto;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
@@ -432,11 +434,13 @@ const getPageIcon = (data) => {
   width: 100%;
   padding: 32px;
   gap: 24px;
+  pointer-events: none;
 }
 
 /* 左侧导航栏 */
 .sidebar-nav {
   width: 280px;
+  pointer-events: auto;
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
@@ -609,6 +613,7 @@ const getPageIcon = (data) => {
 /* 移动端预览 */
 .preview-area.is-mobile {
   justify-content: center;
+  pointer-events: auto;
 }
 
 /* 网页端预览 */
@@ -645,6 +650,7 @@ const getPageIcon = (data) => {
   padding: 14px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
   position: relative;
+  pointer-events: auto;
 }
 
 .phone-header {
@@ -686,13 +692,15 @@ const getPageIcon = (data) => {
   height: calc(100% - 44px);
   background: white;
   border-radius: 0 0 30px 30px;
-  overflow: hidden;
+  overflow: visible;
+  pointer-events: auto;
 }
 
 .preview-iframe {
   width: 100%;
   height: 100%;
   border: none;
+  pointer-events: auto;
 }
 
 .iframe-error {

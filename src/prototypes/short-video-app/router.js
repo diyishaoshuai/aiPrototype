@@ -67,5 +67,10 @@ export default [
     path: '/drama/:id',
     name: 'DramaPlayer',
     component: () => import('./views/DramaPlayer.vue')
+  },
+  {
+    path: '/drama/:id/landscape',
+    name: 'LandscapePlayer',
+    component: () => import('./views/LandscapePlayer.vue')
   }
 ]
