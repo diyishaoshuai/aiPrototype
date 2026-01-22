@@ -692,7 +692,7 @@ const getPageIcon = (data) => {
   height: calc(100% - 44px);
   background: white;
   border-radius: 0 0 30px 30px;
-  overflow: visible;
+  overflow: hidden;
   pointer-events: auto;
 }
 
@@ -700,6 +700,7 @@ const getPageIcon = (data) => {
   width: 100%;
   height: 100%;
   border: none;
+  border-radius: 0 0 30px 30px;
   pointer-events: auto;
 }
 

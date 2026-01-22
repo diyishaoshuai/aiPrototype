@@ -10,7 +10,7 @@
     @pointercancel="onPointerCancel"
   >
     <!-- 顶部导航栏 -->
-    <div v-show="!isSpeedPlaying && !isFullscreen && !isLandscape" class="top-nav">
+    <div v-show="!isFullscreen && !isLandscape" class="top-nav">
       <button class="back-btn" @click="goBack">←</button>
       <div class="drama-info-top">
         <div class="drama-name">{{ dramaInfo.name }}</div>
@@ -72,11 +72,9 @@
     </transition>
 
     <!-- 视频区域：抖音式 3 屏轨道（prev/current/next）。轨道始终覆盖视口，滑动无缝衔接 -->
-    <div 
-      class="video-stage" 
+    <div
+      class="video-stage"
       :class="{ 'landscape-video': isLandscape, 'fullscreen-video': isFullscreen }"
-      @click="handleVideoClick"
-      @touchstart="handleVideoClick"
     >
       <div
         class="video-track"
@@ -115,14 +113,14 @@
     </div>
 
     <!-- 左下角信息区域 -->
-    <div v-show="!isSpeedPlaying && !isFullscreen" class="left-info">
+    <div v-show="!isFullscreen && !isLandscape" class="left-info">
       <div class="author-name">@{{ dramaInfo.author }}</div>
       <div class="episode-title">第{{ currentEpisode.episode }}集</div>
       <div class="episode-desc">{{ currentEpisode.description }}</div>
     </div>
 
     <!-- 右下角功能按钮 -->
-    <div v-show="!isSpeedPlaying && !isFullscreen" class="right-actions">
+    <div v-show="!isFullscreen && !isLandscape" class="right-actions">
       <!-- 发布人头像 + 关注按钮 -->
       <div class="action-item avatar-wrapper">
         <div class="avatar">{{ dramaInfo.authorAvatar }}</div>
@@ -151,7 +149,14 @@
     </div>
 
     <!-- 进度条 -->
-    <div class="progress-bar-container" @click="handleProgressClick" @touchstart="handleProgressTouchStart" @touchmove="handleProgressTouchMove" @touchend="handleProgressTouchEnd">
+    <div
+      v-show="!isLandscape"
+      class="progress-bar-container"
+      @click="handleProgressClick"
+      @touchstart="handleProgressTouchStart"
+      @touchmove="handleProgressTouchMove"
+      @touchend="handleProgressTouchEnd"
+    >
       <div class="progress-bar">
         <div class="progress-played" :style="{ width: progress + '%' }"></div>
       </div>
@@ -166,64 +171,23 @@
       @pointercancel="onSpeedPlayUp"
     ></div>
 
-    <!-- 全屏模式顶部导航 -->
-    <transition name="fade">
-      <div v-if="isFullscreen && showFullscreenControls && !isLandscape" class="fullscreen-top-nav" @click.stop>
-        <button class="fullscreen-back-btn" @click="exitFullscreen">←</button>
-        <div class="fullscreen-drama-info">
-          <span class="fullscreen-drama-name">{{ dramaInfo.name }}</span>
-          <span class="fullscreen-episode">第{{ currentEpisode.episode }}集</span>
-        </div>
-      </div>
-    </transition>
-
-    <!-- 全屏模式底部控制栏 -->
-    <transition name="fade">
-      <div v-if="isFullscreen && showFullscreenControls && !isLandscape" class="fullscreen-bottom-controls" @click.stop>
-        <!-- 进度条 -->
-        <div class="fullscreen-progress-wrapper">
-          <div class="fullscreen-time-display">
-            <span class="current-time">{{ formatTime(currentTime) }}</span>
-            <span class="separator">/</span>
-            <span class="total-time">{{ formatTime(totalTime) }}</span>
-          </div>
-          <div class="fullscreen-progress-bar" @click="handleFullscreenProgressClick">
-            <div class="fullscreen-progress-track">
-              <div class="fullscreen-progress-played" :style="{ width: progress + '%' }"></div>
-              <div class="fullscreen-progress-dot" :style="{ left: progress + '%' }"></div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 控制按钮 -->
-        <div class="fullscreen-controls-row">
-          <button class="fullscreen-control-btn" @click="togglePlayPause">
-            <span class="control-icon">{{ isPlaying ? '⏸' : '▶' }}</span>
-          </button>
-          <button class="fullscreen-control-btn" @click="showFullscreenSpeedMenu">
-            <span class="control-text">{{ playbackSpeed }}x</span>
-          </button>
-          <button class="fullscreen-control-btn" @click="showFullscreenQualityMenu">
-            <span class="control-text">{{ currentQuality }}</span>
-          </button>
-          <button class="fullscreen-control-btn" @click="toggleDanmaku">
-            <span class="control-icon" :class="{ active: danmakuEnabled }">💬</span>
-          </button>
-          <button class="fullscreen-control-btn" @click="exitFullscreen">
-            <span class="control-icon">⛶</span>
-          </button>
-        </div>
-      </div>
-    </transition>
-
-    <!-- 底部短剧信息栏 -->
-    <div 
-      v-show="!isSpeedPlaying && !isFullscreen && !isLandscape"
-      class="bottom-bar" 
-      :style="{ cursor: 'pointer' }"
-      @click="handleBottomBarClick"
+    <!-- 底部短剧信息栏 / 全屏退出按钮 / 加速提示 -->
+    <div
+      v-show="!isLandscape"
+      class="bottom-bar"
+      :class="{ 'fullscreen-mode': isFullscreen }"
+      @click.stop="handleBottomBarClick"
     >
-      <div class="bottom-bar-content">
+      <!-- 加速模式 -->
+      <div v-if="isSpeedPlaying" class="bottom-bar-content speed-content">
+        <div class="speed-text">{{ isFullscreen ? '2x·全屏模式播放中' : '2x速播放中' }}</div>
+      </div>
+      <!-- 全屏模式 -->
+      <div v-else-if="isFullscreen" class="bottom-bar-content fullscreen-content">
+        <div class="fullscreen-exit-text">退出全屏</div>
+      </div>
+      <!-- 正常模式 -->
+      <div v-else class="bottom-bar-content">
         <div class="drama-title">{{ dramaInfo.name }}</div>
         <div class="total-episodes">共{{ dramaInfo.totalEpisodes }}集</div>
         <div class="arrow-icon">▲</div>
@@ -231,7 +195,7 @@
     </div>
 
     <!-- 更多菜单弹窗 -->
-    <div v-if="showMoreMenuSheet && !isSpeedPlaying && !isFullscreen" class="more-menu-sheet" @click.self="showMoreMenuSheet = false">
+    <div v-if="showMoreMenuSheet && !isFullscreen" class="more-menu-sheet" @click.self="showMoreMenuSheet = false">
       <div class="more-menu-content" @click.stop>
         <!-- 顶部标题 -->
         <div class="more-menu-header">
@@ -304,7 +268,7 @@
     </div>
 
     <!-- 更多好友列表半窗 -->
-    <div v-if="showMoreFriendsList && !isSpeedPlaying && !isFullscreen" class="more-friends-sheet" @click.self="showMoreFriendsList = false">
+    <div v-if="showMoreFriendsList && !isFullscreen" class="more-friends-sheet" @click.self="showMoreFriendsList = false">
       <div class="more-friends-content" @click.stop>
         <div class="more-friends-header">
           <div class="more-friends-title">选择好友</div>
@@ -325,7 +289,7 @@
     </div>
 
     <!-- 分享给好友弹窗（带视频封面和简介） -->
-    <div v-if="showShareToFriendDialog && !isSpeedPlaying && !isFullscreen" class="share-to-friend-dialog" @click.self="showShareToFriendDialog = false">
+    <div v-if="showShareToFriendDialog && !isFullscreen" class="share-to-friend-dialog" @click.self="showShareToFriendDialog = false">
       <div class="share-to-friend-content" @click.stop>
         <!-- 视频封面和简介 -->
         <div class="share-video-preview">
@@ -359,7 +323,7 @@
     </div>
 
     <!-- 分享弹窗（带输入框） -->
-    <div v-if="showShareDialog && !isSpeedPlaying && !isFullscreen" class="share-dialog" @click.self="showShareDialog = false">
+    <div v-if="showShareDialog && !isFullscreen" class="share-dialog" @click.self="showShareDialog = false">
       <div class="share-dialog-content" @click.stop>
         <!-- 顶部标题 -->
         <div class="share-dialog-header">
@@ -398,7 +362,7 @@
     </div>
 
     <!-- 分享给好友弹窗 -->
-    <div v-if="showShareToFriendsDialog && !isSpeedPlaying && !isFullscreen" class="share-friends-dialog" @click.self="showShareToFriendsDialog = false">
+    <div v-if="showShareToFriendsDialog && !isFullscreen" class="share-friends-dialog" @click.self="showShareToFriendsDialog = false">
       <div class="share-friends-content" @click.stop>
         <!-- 顶部标题 -->
         <div class="share-friends-header">
@@ -448,7 +412,7 @@
     </div>
 
     <!-- 评论半屏弹窗 -->
-    <div v-if="showCommentSheet && !isSpeedPlaying && !isFullscreen" class="comment-sheet" @click.self="showCommentSheet = false">
+    <div v-if="showCommentSheet && !isFullscreen" class="comment-sheet" @click.self="showCommentSheet = false">
       <div class="comment-content" @click.stop>
         <!-- 顶部标题栏 -->
         <div class="comment-header">
@@ -545,7 +509,7 @@
     </div>
 
     <!-- 选集半屏弹窗 -->
-    <div v-if="showEpisodeSheet && !isSpeedPlaying && !isFullscreen" class="episode-sheet" @click.self="showEpisodeSheet = false">
+    <div v-if="showEpisodeSheet && !isFullscreen" class="episode-sheet" @click.self="showEpisodeSheet = false">
       <div 
         class="sheet-content" 
         :class="{ 'sheet-fullscreen': isSheetFullscreen }"
@@ -666,6 +630,13 @@
       </div>
     </div>
   </div>
+
+  <!-- Toast 提示 -->
+  <transition name="toast-fade">
+    <div v-if="toast.show" class="toast-message">
+      {{ toast.message }}
+    </div>
+  </transition>
 </template>
 
 <script setup>
@@ -846,7 +817,7 @@ const onPointerDown = (e) => {
   // 在横屏或全屏模式下，检查是否点击在控制栏上
   if (isLandscape.value || isFullscreen.value) {
     const target = e.target
-    const isControlElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar')
+    const isControlElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar, .bottom-bar')
     if (isControlElement) {
       // 如果点击在控制栏上，不处理滑动逻辑
       return
@@ -942,22 +913,55 @@ const onPointerUp = async (e) => {
   const currentTime = performance.now()
   const currentX = e.clientX
   const currentY = e.clientY
-  
-  // 在横屏或全屏模式下，单击屏幕显示控件（不处理双击点赞）
-  if (isLandscape.value || isFullscreen.value) {
+
+  // 在横屏模式下，单击屏幕显示控件（不处理双击点赞）
+  if (isLandscape.value) {
     if (!moved) {
       // 检查是否在可交互元素上
       const target = e.target
-      const isInteractiveElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar')
-      
+      const isInteractiveElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .landscape-control-btn, .landscape-progress-bar')
+
       if (!isInteractiveElement) {
         // 单击屏幕，显示控件
-        if (isLandscape.value) {
-          handleLandscapeVideoClick()
-        } else if (isFullscreen.value) {
-          handleFullscreenVideoClick()
+        handleLandscapeVideoClick()
+      }
+    }
+    isPointerDown.value = false
+    await resetToCenterNoTransition()
+    return
+  }
+
+  // 全屏模式下，支持双击点赞
+  if (isFullscreen.value) {
+    if (!moved) {
+      const target = e.target
+      const isInteractiveElement = target.closest('.bottom-bar')
+
+      if (!isInteractiveElement) {
+        // 检测双击点赞
+        const timeSinceLastClick = currentTime - lastClickTime
+        const distanceFromLastClick = Math.sqrt(
+          Math.pow(currentX - lastClickX, 2) + Math.pow(currentY - lastClickY, 2)
+        )
+
+        if (timeSinceLastClick < DOUBLE_CLICK_DELAY &&
+            distanceFromLastClick < DOUBLE_CLICK_DISTANCE) {
+          // 检测到双击，触发点赞动画
+          triggerDoubleClickLike(e)
+          lastClickTime = 0
+          isPointerDown.value = false
+          await resetToCenterNoTransition()
+          return
+        } else {
+          // 记录点击信息
+          lastClickTime = currentTime
+          lastClickX = currentX
+          lastClickY = currentY
         }
       }
+    } else {
+      // 有移动，重置双击检测
+      lastClickTime = 0
     }
     isPointerDown.value = false
     await resetToCenterNoTransition()
@@ -1101,10 +1105,6 @@ const showLandscapeMoreMenuSheet = ref(false)
 const showLandscapeControls = ref(true)
 let landscapeControlsTimer = null
 
-// 全屏模式控制栏状态
-const showFullscreenControls = ref(true)
-let fullscreenControlsTimer = null
-
 // 视频点击处理（显示/隐藏控制栏）
 const handleVideoClick = (e) => {
   // 如果更多菜单已打开，不处理视频点击
@@ -1114,22 +1114,19 @@ const handleVideoClick = (e) => {
 
   // 如果点击的是控制栏或其他交互元素，不处理
   const target = e.target
-  const isControlElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-top-nav, .fullscreen-bottom-controls, .landscape-control-btn, .fullscreen-control-btn, .landscape-progress-bar, .fullscreen-progress-bar, .landscape-progress-wrapper, .fullscreen-progress-wrapper, .right-actions, .left-info, .top-nav, .bottom-bar, .landscape-more-btn, .landscape-back-btn, .fullscreen-back-btn, .landscape-more-menu-sheet, .landscape-more-menu-content, .more-menu-sheet')
+  const isControlElement = target.closest('.landscape-top-nav, .landscape-bottom-controls, .fullscreen-bottom-bar, .landscape-control-btn, .landscape-progress-bar, .landscape-progress-wrapper, .right-actions, .left-info, .top-nav, .bottom-bar, .landscape-more-btn, .landscape-back-btn, .landscape-more-menu-sheet, .landscape-more-menu-content, .more-menu-sheet')
 
   if (isControlElement) {
     return
   }
 
-  // 在横屏或全屏模式下，单击屏幕显示控件
+  // 在横屏模式下，单击屏幕显示控件
   if (isLandscape.value) {
     e.preventDefault()
     e.stopPropagation()
     handleLandscapeVideoClick()
-  } else if (isFullscreen.value) {
-    e.preventDefault()
-    e.stopPropagation()
-    handleFullscreenVideoClick()
   }
+  // 全屏模式下不需要特殊处理，保持简洁
 }
 
 // 横屏模式视频点击处理（显示/隐藏控制栏）
@@ -1143,20 +1140,6 @@ const handleLandscapeVideoClick = () => {
   // 3秒后自动隐藏
   landscapeControlsTimer = setTimeout(() => {
     showLandscapeControls.value = false
-  }, 3000)
-}
-
-// 全屏模式视频点击处理（显示/隐藏控制栏）
-const handleFullscreenVideoClick = () => {
-  if (!isFullscreen.value) return
-  // 单击屏幕总是显示所有控件
-  showFullscreenControls.value = true
-  
-  // 清除之前的定时器
-  clearTimeout(fullscreenControlsTimer)
-  // 3秒后自动隐藏
-  fullscreenControlsTimer = setTimeout(() => {
-    showFullscreenControls.value = false
   }, 3000)
 }
 
@@ -1215,6 +1198,13 @@ const switchTip = ref({
   text: '',
   type: '' // 'next' or 'prev'
 })
+
+// Toast 提示
+const toast = ref({
+  show: false,
+  message: ''
+})
+let toastTimer = null
 
 // 动画相关状态（旧实现遗留，已由轨道滑动 isAnimating/noTransition 接管）
 
@@ -1528,7 +1518,8 @@ const selectFriendForShare = (friend) => {
 // 确认分享给好友
 const confirmShareToFriend = () => {
   if (!selectedFriend.value) return
-  alert(`已分享给 ${selectedFriend.value.name}：${shareToFriendMessage.value || '（无留言）'}`)
+  const message = shareToFriendMessage.value ? `\n留言：${shareToFriendMessage.value}` : ''
+  showToast(`已分享给 ${selectedFriend.value.name}${message}`)
   showShareToFriendDialog.value = false
   shareToFriendMessage.value = ''
   selectedFriend.value = null
@@ -1593,47 +1584,17 @@ const togglePlayPause = () => {
 // 退出全屏模式
 const exitFullscreen = () => {
   isFullscreen.value = false
-  showFullscreenControls.value = true
-  clearTimeout(fullscreenControlsTimer)
-}
-
-// 全屏模式进度条点击处理
-const handleFullscreenProgressClick = (e) => {
-  e.stopPropagation() // 阻止事件冒泡到视频区域
-  const rect = e.currentTarget.getBoundingClientRect()
-  const clickX = e.clientX - rect.left
-  const newProgress = (clickX / rect.width) * 100
-  progress.value = Math.max(0, Math.min(100, newProgress))
-  // 更新当前时间
-  currentTime.value = (progress.value / 100) * totalTime.value
-  // 显示控制栏并重置隐藏定时器
-  showFullscreenControls.value = true
-  clearTimeout(fullscreenControlsTimer)
-  fullscreenControlsTimer = setTimeout(() => {
-    showFullscreenControls.value = false
-  }, 3000)
-}
-
-// 全屏模式显示倍速菜单
-const showFullscreenSpeedMenu = () => {
-  // 可以打开一个菜单选择倍速
-  showLandscapeMoreMenuSheet.value = true
-}
-
-// 全屏模式显示画质菜单
-const showFullscreenQualityMenu = () => {
-  // 可以打开一个菜单选择画质
-  showLandscapeMoreMenuSheet.value = true
 }
 
 // 处理底部栏点击
 const handleBottomBarClick = () => {
-  if (isSpeedPlaying || isFullscreen) {
-    // 如果是全屏模式，点击退出全屏
-    if (isFullscreen) {
-      exitFullscreen()
-    }
-    // 如果是倍速模式，不做任何操作（或者可以添加退出倍速的逻辑）
+  if (isFullscreen.value) {
+    // 全屏模式下，点击退出全屏
+    isFullscreen.value = false
+    return
+  }
+  if (isSpeedPlaying.value) {
+    // 倍速模式下，不做任何操作
     return
   }
   // 正常模式，显示选集
@@ -1644,16 +1605,6 @@ const handleBottomBarClick = () => {
 const toggleFullscreenFromMenu = () => {
   isFullscreen.value = !isFullscreen.value
   showMoreMenuSheet.value = false
-  if (isFullscreen.value) {
-    showFullscreenControls.value = true
-    // 3秒后自动隐藏控制栏
-    clearTimeout(fullscreenControlsTimer)
-    fullscreenControlsTimer = setTimeout(() => {
-      showFullscreenControls.value = false
-    }, 3000)
-  } else {
-    clearTimeout(fullscreenControlsTimer)
-  }
 }
 
 // 切换弹幕
@@ -1665,6 +1616,8 @@ const toggleDanmaku = () => {
 
 // 双击点赞动画
 const triggerDoubleClickLike = async (e) => {
+  console.log('🎉 双击点赞触发！', { x: e.clientX, y: e.clientY })
+
   // 如果还没点赞，先点赞
   if (!currentEpisode.value.isLiked) {
     toggleLike()
@@ -1672,33 +1625,36 @@ const triggerDoubleClickLike = async (e) => {
     // 如果已点赞，增加点赞数
     currentEpisode.value.likes++
   }
-  
+
   // 清除之前的定时器和动画
   if (heartAnimationTimer) {
     clearTimeout(heartAnimationTimer)
     heartAnimationTimer = null
   }
-  
+
   // 先隐藏之前的爱心（如果有）
   showHeart.value = false
-  
+
   // 等待 DOM 更新
   await nextTick()
-  
+
   // 计算点击位置
   const rect = playerEl.value.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
-  
+
+  console.log('❤️ 爱心位置:', { x, y, rect })
+
   // 设置爱心位置（不设置 transform，让动画完全控制）
   heartStyle.value = {
     left: `${x}px`,
     top: `${y}px`
   }
-  
+
   // 显示爱心并触发动画
   showHeart.value = true
-  
+  console.log('✅ 爱心显示状态:', showHeart.value)
+
   // 动画结束后隐藏（确保在动画完成后才隐藏）
   heartAnimationTimer = setTimeout(async () => {
     showHeart.value = false
@@ -1714,18 +1670,53 @@ const share = () => {
   openShareDialog()
 }
 
+// 显示 Toast 提示
+const showToast = (message) => {
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toast.value.message = message
+  toast.value.show = true
+
+  toastTimer = setTimeout(() => {
+    toast.value.show = false
+    toast.value.message = ''
+  }, 2000)
+}
+
+// 分享给好友（批量）
+const sendToFriends = () => {
+  if (selectedFriends.value.size === 0) return
+
+  const friendNames = Array.from(selectedFriends.value).map(id => {
+    const friend = displayedFriends.value.find(f => f.id === id)
+    return friend ? friend.name : ''
+  }).filter(Boolean).join('、')
+
+  const message = shareToFriendsMessage.value ? `\n留言：${shareToFriendsMessage.value}` : ''
+
+  // 显示成功提示
+  showToast(`已分享给 ${friendNames}${message}`)
+
+  // 关闭弹窗并重置状态
+  showShareToFriendsDialog.value = false
+  shareToFriendsMessage.value = ''
+  selectedFriends.value.clear()
+}
+
 // 分享到微信
 const shareToWechat = () => {
-  const message = shareMessage.value ? `\n${shareMessage.value}` : ''
-  alert(`分享到微信好友${message}`)
+  const message = shareMessage.value ? `\n留言：${shareMessage.value}` : ''
+  showToast(`已分享到微信好友${message}`)
   showShareDialog.value = false
   shareMessage.value = ''
 }
 
 // 分享到朋友圈
 const shareToMoments = () => {
-  const message = shareMessage.value ? `\n${shareMessage.value}` : ''
-  alert(`分享到朋友圈${message}`)
+  const message = shareMessage.value ? `\n留言：${shareMessage.value}` : ''
+  showToast(`已分享到朋友圈${message}`)
   showShareDialog.value = false
   shareMessage.value = ''
 }
@@ -1734,13 +1725,11 @@ const shareToMoments = () => {
 const copyLink = () => {
   const link = `https://example.com/drama/${dramaInfo.value.id}/episode/${currentEpisode.value.episode}`
   const message = shareMessage.value ? `\n${shareMessage.value}` : ''
-  navigator.clipboard.writeText(`${link}${message}`).then(() => {
-    alert('链接已复制到剪贴板')
-    showShareDialog.value = false
-    shareMessage.value = ''
-  }).catch(() => {
-    alert('复制失败，请手动复制')
-  })
+
+  // 模拟复制成功
+  showToast('链接已复制到剪贴板')
+  showShareDialog.value = false
+  shareMessage.value = ''
 }
 
 // 切换分集分类
@@ -1963,14 +1952,6 @@ watch(isFullscreen, (newVal) => {
     if (showShareToFriendsDialog.value) showShareToFriendsDialog.value = false
     if (showMoreFriendsList.value) showMoreFriendsList.value = false
     if (showShareToFriendDialog.value) showShareToFriendDialog.value = false
-    // 显示控制栏并设置自动隐藏
-    showFullscreenControls.value = true
-    clearTimeout(fullscreenControlsTimer)
-    fullscreenControlsTimer = setTimeout(() => {
-      showFullscreenControls.value = false
-    }, 3000)
-  } else {
-    clearTimeout(fullscreenControlsTimer)
   }
 })
 
@@ -2149,179 +2130,7 @@ const toggleFullscreen = (e) => {
   background: #000;
 }
 
-/* 全屏模式顶部导航 */
-.fullscreen-top-nav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 0 20px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
-  z-index: 25;
-  pointer-events: none;
-}
 
-.fullscreen-top-nav > * {
-  pointer-events: auto;
-}
-
-.fullscreen-back-btn {
-  background: transparent;
-  border: none;
-  font-size: 24px;
-  color: white;
-  cursor: pointer;
-  padding: 8px;
-}
-
-.fullscreen-drama-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.fullscreen-drama-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: white;
-}
-
-.fullscreen-episode {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* 全屏模式底部控制栏 */
-.fullscreen-bottom-controls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0) 100%);
-  z-index: 25;
-  padding: 16px 20px 20px;
-  pointer-events: none;
-  /* 确保控制栏可见 */
-  will-change: opacity;
-}
-
-.fullscreen-bottom-controls > * {
-  pointer-events: auto;
-}
-
-/* 全屏模式进度条区域 */
-.fullscreen-progress-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.fullscreen-time-display {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: white;
-  font-size: 14px;
-  white-space: nowrap;
-  min-width: 100px;
-}
-
-.fullscreen-time-display .current-time {
-  color: white;
-}
-
-.fullscreen-time-display .separator {
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0 2px;
-}
-
-.fullscreen-time-display .total-time {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.fullscreen-progress-bar {
-  flex: 1;
-  height: 4px;
-  cursor: pointer;
-  position: relative;
-}
-
-.fullscreen-progress-track {
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  position: relative;
-  overflow: visible;
-}
-
-.fullscreen-progress-played {
-  height: 100%;
-  background: #ff4757;
-  border-radius: 2px;
-  position: absolute;
-  left: 0;
-  top: 0;
-  transition: width 0.1s ease;
-}
-
-.fullscreen-progress-dot {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background: #ff4757;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  transition: left 0.1s ease;
-}
-
-/* 全屏模式控制按钮行 */
-.fullscreen-controls-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-}
-
-.fullscreen-control-btn {
-  background: transparent;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s;
-  min-width: 44px;
-}
-
-.fullscreen-control-btn:active {
-  opacity: 0.7;
-}
-
-.fullscreen-control-btn .control-icon {
-  font-size: 24px;
-  color: white;
-}
-
-.fullscreen-control-btn .control-icon.active {
-  color: #ff4757;
-}
-
-.fullscreen-control-btn .control-text {
-  font-size: 14px;
-  color: white;
-  white-space: nowrap;
-}
 
 /* 顶部导航栏 */
 .top-nav {
@@ -2458,6 +2267,8 @@ const toggleFullscreen = (e) => {
   right: 0;
   bottom: 0;
   overflow: hidden;
+  pointer-events: none; /* 不拦截点击事件 */
+  z-index: 1; /* 确保爱心元素能显示在视频上方 */
 }
 
 .video-track {
@@ -2472,6 +2283,7 @@ const toggleFullscreen = (e) => {
   transform: translateZ(0);
   backface-visibility: hidden;
   contain: layout paint;
+  pointer-events: none; /* 不拦截点击事件 */
 }
 
 .video-track.transitioning {
@@ -2484,6 +2296,7 @@ const toggleFullscreen = (e) => {
   height: 33.3333%;
   flex: 0 0 33.3333%;
   background: inherit;
+  pointer-events: none; /* 不拦截点击事件 */
 }
 
 .video-placeholder {
@@ -2493,6 +2306,7 @@ const toggleFullscreen = (e) => {
   align-items: center;
   justify-content: center;
   font-size: 120px;
+  pointer-events: none; /* 不拦截点击事件 */
 }
 
 /* 集数切换提示 */
@@ -2838,7 +2652,14 @@ const toggleFullscreen = (e) => {
   padding: 6px 16px;
   color: white;
   cursor: pointer;
-  z-index: 10;
+  z-index: 100;
+  pointer-events: auto; /* 确保可以接收点击事件 */
+}
+
+/* 全屏模式下的底部栏 */
+.bottom-bar.fullscreen-mode {
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 25;
 }
 
 .bottom-bar-content {
@@ -2851,6 +2672,29 @@ const toggleFullscreen = (e) => {
   border-radius: 24px;
   padding: 0 16px;
   height: 48px;
+}
+
+/* 全屏模式下的内容样式 */
+.bottom-bar-content.fullscreen-content {
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.fullscreen-exit-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 加速模式下的内容样式 */
+.bottom-bar-content.speed-content {
+  justify-content: center;
+  background: rgba(255, 165, 0, 0.3);
+}
+
+.speed-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
 }
 
 .bottom-bar.speed-mode .bottom-bar-content {
@@ -3830,14 +3674,16 @@ const toggleFullscreen = (e) => {
 /* 双击点赞爱心动画 - 仿抖音效果 */
 .heart-animation {
   position: absolute;
-  font-size: 60px;
+  font-size: 80px;
   pointer-events: none;
-  z-index: 1000;
+  z-index: 9999;
   will-change: transform, opacity;
   animation: heartFloat 1.2s ease-out forwards;
   transform-origin: center center;
-  /* 确保动画结束后元素不可见 */
   animation-fill-mode: forwards;
+  color: #ff2d55;
+  text-shadow: 0 0 20px rgba(255, 45, 85, 0.8);
+  filter: drop-shadow(0 0 10px rgba(255, 45, 85, 0.6));
 }
 
 @keyframes heartFloat {
@@ -3860,11 +3706,6 @@ const toggleFullscreen = (e) => {
   }
 }
 
-/* 确保动画结束后元素完全隐藏 */
-.heart-animation[style*="display: none"],
-.heart-animation:not([style*="display"]) {
-  display: none !important;
-}
 
 /* 选集列表网格样式 */
 .episode-list-grid {
@@ -4467,5 +4308,34 @@ const toggleFullscreen = (e) => {
 .landscape-function-key-label {
   font-size: 12px;
   color: #666;
+}
+
+/* Toast 提示样式 */
+.toast-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 10000;
+  max-width: 80%;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Toast 淡入淡出动画 */
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -335,14 +335,17 @@ const formatTime = (seconds) => {
 </script>
 
 <style scoped>
+/* 横屏容器 - 旋转90度模拟手机横屏 */
 .landscape-player-page {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100vh;
+  height: 100vw;
   background: #000;
   overflow: hidden;
+  transform-origin: top left;
+  transform: rotate(90deg) translateY(-100%);
 }
 
 .video-area {
@@ -359,78 +362,85 @@ const formatTime = (seconds) => {
   font-size: 120px;
 }
 
-/* 顶部导航栏 */
+/* 顶部导航栏 - 横屏左侧 */
 .top-nav {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 56px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+  padding: 0 24px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
   z-index: 10;
 }
 
 .back-btn, .more-btn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border: none;
-  background: transparent;
+  background: rgba(255,255,255,0.1);
   color: white;
   font-size: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.back-btn:hover, .more-btn:hover {
+  background: rgba(255,255,255,0.2);
 }
 
 .drama-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   color: white;
 }
 
 .drama-name {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
 }
 
 .episode-info {
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 16px;
+  opacity: 0.9;
 }
 
-/* 底部控制栏 */
+/* 底部控制栏 - 横屏右侧 */
 .bottom-controls {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 16px 20px;
-  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  padding: 20px 24px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
   z-index: 10;
 }
 
 .progress-section {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .time-text {
   color: white;
-  font-size: 12px;
-  min-width: 45px;
+  font-size: 14px;
+  min-width: 50px;
+  font-weight: 500;
 }
 
 .progress-bar {
   flex: 1;
-  height: 20px;
+  height: 24px;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -438,63 +448,71 @@ const formatTime = (seconds) => {
 
 .progress-track {
   width: 100%;
-  height: 4px;
+  height: 5px;
   background: rgba(255,255,255,0.3);
-  border-radius: 2px;
+  border-radius: 3px;
   position: relative;
 }
 
 .progress-played {
   height: 100%;
   background: #667eea;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .progress-dot {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: white;
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .controls-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 32px;
 }
 
 .control-btn {
   border: none;
-  background: transparent;
+  background: rgba(255,255,255,0.1);
   color: white;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  padding: 10px 16px;
+  border-radius: 12px;
+  transition: all 0.2s;
+  min-width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .control-btn:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.05);
 }
 
 .control-btn.active {
-  color: #667eea;
+  background: #667eea;
+  color: white;
 }
 
 .btn-icon {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .btn-text {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
 }
 
-/* 更多菜单 */
+/* 更多菜单 - 横屏优化 */
 .more-menu-overlay,
 .episode-list-overlay {
   position: absolute;
@@ -502,7 +520,7 @@ const formatTime = (seconds) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
   z-index: 100;
   display: flex;
   justify-content: flex-end;
@@ -510,81 +528,109 @@ const formatTime = (seconds) => {
 
 .more-menu-panel,
 .episode-list-panel {
-  width: 320px;
+  width: 380px;
   height: 100%;
   background: white;
   overflow-y: auto;
+  box-shadow: -4px 0 12px rgba(0,0,0,0.3);
 }
 
 .menu-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
 }
 
 .menu-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: #333;
 }
 
 .close-btn {
   border: none;
   background: transparent;
-  font-size: 20px;
-  color: #666;
+  font-size: 24px;
+  color: #999;
   cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(0,0,0,0.05);
+  color: #333;
 }
 
 .menu-section {
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .section-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: #333;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .option-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
 }
 
 .option-item {
-  padding: 8px 16px;
+  padding: 10px 20px;
   background: #f5f5f5;
-  border-radius: 20px;
-  font-size: 14px;
+  border-radius: 24px;
+  font-size: 16px;
   color: #666;
   cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.option-item:hover {
+  background: #e8e8e8;
+  transform: translateY(-2px);
 }
 
 .option-item.active {
   background: #667eea;
   color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .function-list {
   display: flex;
-  gap: 24px;
+  gap: 32px;
 }
 
 .function-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.function-item:hover {
+  transform: scale(1.1);
 }
 
 .function-icon {
-  font-size: 24px;
+  font-size: 32px;
+  transition: all 0.2s;
 }
 
 .function-icon.active {
@@ -592,16 +638,17 @@ const formatTime = (seconds) => {
 }
 
 .function-label {
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
+  font-weight: 500;
 }
 
-/* 选集列表 */
+/* 选集列表 - 横屏优化 */
 .episode-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  padding: 16px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  padding: 20px;
 }
 
 .episode-item {
@@ -610,15 +657,23 @@ const formatTime = (seconds) => {
   align-items: center;
   justify-content: center;
   background: #f5f5f5;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 16px;
   color: #666;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.episode-item:hover {
+  background: #e8e8e8;
+  transform: scale(1.05);
 }
 
 .episode-item.active {
   background: #667eea;
   color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 /* 动画 */
