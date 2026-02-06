@@ -7,6 +7,7 @@
 - 🎨 **Vue 化原型** - 使用 Vue 3 + Vant 4 构建移动端原型
 - 📱 **手机预览** - iPhone 样式的预览框架，真实模拟移动端体验
 - 🖥️ **网页预览** - 支持网页端原型的全屏预览
+- 💻 **客户端原型** - 支持桌面客户端应用原型，可拖拽窗口设计
 - 🔄 **热更新** - 开发时实时预览原型变化
 - 📦 **多入口构建** - Vite 支持多个原型应用独立构建
 - 🗂️ **原型管理** - 完整的 CRUD 操作和分类管理
@@ -118,8 +119,16 @@ aiPrototype/
 │   │   │       ├── DramaList.vue      # 短剧列表
 │   │   │       ├── DramaPlayer.vue    # 短剧播放器
 │   │   │       └── LandscapePlayer.vue # 横屏播放器
-│   │   ├── xingqu/             # 星趣官网
-│   │   └── xingqu_h5/          # 星趣移动端
+│   │   ├── xingqu_web/         # 星趣官网（电脑端）
+│   │   ├── xingqu_h5/          # 星趣官网（手机端）
+│   │   └── xingqu-client/      # 星趣PC客户端
+│   │       ├── main.js         # 客户端入口
+│   │       ├── Layout.vue      # 全屏画布布局
+│   │       ├── router.js       # 客户端路由
+│   │       ├── components/     # 客户端组件
+│   │       │   └── DraggableWindow.vue  # 可拖拽窗口
+│   │       └── views/          # 客户端页面
+│   │           └── StreamingTool.vue    # 直播工具
 │   └── main.js                 # 主应用入口
 ├── server/                      # Node.js 后端
 │   ├── index.js                # 服务器配置
@@ -128,8 +137,9 @@ aiPrototype/
 │   └── mockData.js             # 模拟数据
 ├── prototypes/                  # 原型入口 HTML
 │   ├── short-video-app.html    # 短视频应用入口
-│   ├── xingqu.html             # 星趣官网入口
-│   └── xingqu_h5.html          # 星趣移动端入口
+│   ├── xingqu_web.html         # 星趣官网（电脑端）入口
+│   ├── xingqu_h5.html          # 星趣官网（手机端）入口
+│   └── xingqu-client.html      # 星趣PC客户端入口
 └── vite.config.js              # Vite 多入口配置
 ```
 
@@ -163,11 +173,30 @@ aiPrototype/
 - Toast 提示反馈
 - 平滑过渡动画
 
-### 星趣官网 (xingqu)
+### 星趣官网 (xingqu_web / xingqu_h5)
 
 企业官网原型，包含：
-- 首页 - 产品介绍、下载引导
-- 移动端适配版本 (xingqu_h5)
+- 电脑端版本 (xingqu_web) - 产品介绍、下载引导
+- 移动端版本 (xingqu_h5) - 移动端适配设计
+
+### 星趣PC客户端 (xingqu-client)
+
+桌面客户端应用原型，模拟真实的桌面应用体验：
+
+**核心功能：**
+- 直播工具 - 完整的直播推流工具界面
+- 视频源管理 - 摄像头选择、屏幕捕获
+- 美颜特效 - 美颜强度调节、滤镜选择
+- 音频设置 - 麦克风选择、音量控制、降噪
+- 推流设置 - 清晰度、码率、帧率配置
+- 实时数据 - 在线人数、码率、帧率监控
+
+**窗口特性：**
+- 可拖拽窗口 - 通过标题栏拖动窗口位置
+- 窗口控制 - 最小化、最大化、关闭按钮
+- 全屏画布 - 黑色背景的全屏工作区
+- 边界检测 - 窗口不会拖出画布范围
+- 状态保存 - 记住窗口位置和大小
 
 ## 核心功能详解
 
@@ -269,6 +298,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
+        'short-video-app': resolve(__dirname, 'prototypes/short-video-app.html'),
+        'xingqu_web': resolve(__dirname, 'prototypes/xingqu_web.html'),
+        'xingqu_h5': resolve(__dirname, 'prototypes/xingqu_h5.html'),
+        'xingqu-client': resolve(__dirname, 'prototypes/xingqu-client.html'),
         'your-prototype': resolve(__dirname, 'prototypes/your-prototype.html'),
         // ... 其他入口
       }

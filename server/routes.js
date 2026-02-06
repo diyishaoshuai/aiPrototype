@@ -221,6 +221,42 @@ function deletePrototypeProject(filePath) {
   }
 }
 
+// 更新 Vite 配置文件，添加新的原型入口
+function updateViteConfig(prototypeName) {
+  try {
+    const viteConfigPath = path.join(__dirname, '..', 'vite.config.js')
+    let configContent = fs.readFileSync(viteConfigPath, 'utf-8')
+
+    // 查找 input 对象
+    const inputRegex = /input:\s*{([^}]+)}/s
+    const match = configContent.match(inputRegex)
+
+    if (match) {
+      const existingEntries = match[1]
+
+      // 检查是否已存在该入口
+      if (existingEntries.includes(`'${prototypeName}':`)) {
+        console.log(`⚠️  Vite配置中已存在入口: ${prototypeName}`)
+        return
+      }
+
+      // 添加新入口
+      const newEntry = `\n        '${prototypeName}': resolve(__dirname, 'prototypes/${prototypeName}.html'),`
+      const updatedEntries = existingEntries.trimEnd() + newEntry
+      const updatedInput = `input: {${updatedEntries}\n      }`
+
+      configContent = configContent.replace(inputRegex, updatedInput)
+      fs.writeFileSync(viteConfigPath, configContent, 'utf-8')
+
+      console.log(`✅ 已更新 vite.config.js，添加入口: ${prototypeName}`)
+    } else {
+      console.error('❌ 无法找到 vite.config.js 中的 input 配置')
+    }
+  } catch (error) {
+    console.error('❌ 更新 Vite 配置失败:', error)
+  }
+}
+
 // 规范化单页面原型（xingqu_web 和 xingqu_h5），将 pageStructure 设置为空
 function normalizeSinglePagePrototype(proto) {
   if (!proto) return { changed: false, proto }
@@ -407,7 +443,8 @@ app.get('/api/prototypes', async (req, res) => {
 
     res.json(fixed)
   } catch (error) {
-    res.status(500).json({ error: '获取原型列表失败' })
+    console.error('❌ 获取原型列表失败:', error)
+    res.status(500).json({ error: '获取原型列表失败', message: error.message })
   }
 })
 
@@ -549,6 +586,10 @@ app.post('/api/prototypes', async (req, res) => {
     // 自动创建完整的Vue项目
     if (prototype.filePath) {
       createPrototypeProject(prototype.filePath, prototype.title)
+
+      // 更新 Vite 配置，添加新的入口
+      const prototypeName = path.basename(prototype.filePath, '.html')
+      updateViteConfig(prototypeName)
     }
 
     res.status(201).json(prototype)

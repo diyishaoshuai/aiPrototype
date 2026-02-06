@@ -61,9 +61,10 @@
       </div>
 
       <!-- 预览区域 - 根据类型显示不同样式 -->
-      <div class="preview-area" :class="{ 
-        'is-mobile': prototype?.category === '移动端', 
+      <div class="preview-area" :class="{
+        'is-mobile': prototype?.category === '移动端',
         'is-web': prototype?.category === '网页端',
+        'is-client': prototype?.category === '客户端',
         'no-sidebar': !hasPageStructure
       }">
         <!-- 移动端：手机框架 -->
@@ -96,7 +97,23 @@
         </div>
 
         <!-- 网页端：完整网页 -->
-        <div v-else class="web-frame">
+        <div v-else-if="prototype?.category === '网页端'" class="web-frame">
+          <iframe
+            v-if="prototype && currentPageUrl"
+            :src="currentPageUrl"
+            frameborder="0"
+            class="preview-iframe"
+            @load="handleIframeLoad"
+            ref="iframeRef"
+          />
+          <div v-else-if="prototype && !currentPageUrl" class="iframe-error">
+            <p>无法加载页面</p>
+            <p class="error-detail">URL: {{ prototype?.filePath }}</p>
+          </div>
+        </div>
+
+        <!-- 客户端：全屏显示 -->
+        <div v-else-if="prototype?.category === '客户端'" class="client-frame">
           <iframe
             v-if="prototype && currentPageUrl"
             :src="currentPageUrl"
@@ -751,5 +768,149 @@ const getPageIcon = (data) => {
   background: #f3f4f6;
   color: #6b7280;
   font-size: 14px;
+}
+
+/* 客户端预览 */
+.preview-area.is-client {
+  padding: 20px 0;
+  justify-content: center;
+}
+
+/* 客户端窗口框架 */
+.client-frame {
+  width: 100%;
+  height: calc(100vh - 140px);
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+/* 窗口标题栏 */
+.window-titlebar {
+  height: 40px;
+  background: linear-gradient(180deg, #f5f5f5 0%, #ebebeb 100%);
+  border-bottom: 1px solid #d0d0d0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.window-icon {
+  width: 20px;
+  height: 20px;
+  color: #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.window-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.window-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  user-select: none;
+}
+
+.titlebar-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.control-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.control-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.control-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.minimize-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.maximize-btn:hover {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* 窗口内容区域 */
+.window-content {
+  flex: 1;
+  background: white;
+  overflow: hidden;
+  position: relative;
+}
+
+.client-frame .preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: auto;
+}
+
+.client-frame .iframe-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 响应式调整 - 小屏幕 */
+@media (max-width: 1400px) {
+  .client-frame {
+    width: 100%;
+    height: calc(100vh - 140px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .client-frame {
+    width: 100%;
+    height: calc(100vh - 140px);
+  }
 }
 </style>

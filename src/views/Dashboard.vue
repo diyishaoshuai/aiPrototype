@@ -66,6 +66,13 @@
           >
             移动端
           </button>
+          <button
+            class="category-tab"
+            :class="{ active: selectedCategory === '客户端' }"
+            @click="selectCategory('客户端')"
+          >
+            客户端
+          </button>
         </div>
       </div>
 
@@ -114,6 +121,9 @@
       </div>
     </main>
 
+    <!-- 创建对话框 -->
+    <CreatePrototype v-model="showCreateDialog" @success="handleCreateSuccess" />
+
     <!-- 上传对话框 -->
     <UploadPrototype v-model="showUploadDialog" @success="handleUploadSuccess" />
   </div>
@@ -124,6 +134,7 @@ import { useRouter } from 'vue-router'
 import { usePrototypeStore } from '@/stores/prototype'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import UploadPrototype from '@/components/UploadPrototype.vue'
+import CreatePrototype from '@/components/CreatePrototype.vue'
 
 const router = useRouter()
 const store = usePrototypeStore()
@@ -131,6 +142,7 @@ const store = usePrototypeStore()
 const searchText = ref('')
 const selectedCategory = ref('')
 const showUploadDialog = ref(false)
+const showCreateDialog = ref(false)
 
 onMounted(() => {
   store.fetchPrototypes()
@@ -154,7 +166,11 @@ const selectCategory = (category) => {
 }
 
 const createPrototype = () => {
-  showUploadDialog.value = true
+  showCreateDialog.value = true
+}
+
+const handleCreateSuccess = () => {
+  store.fetchPrototypes()
 }
 
 const handleUploadSuccess = () => {

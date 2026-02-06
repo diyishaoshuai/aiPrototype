@@ -33,6 +33,7 @@
             >
               <el-option label="网页端" value="网页端" />
               <el-option label="移动端" value="移动端" />
+              <el-option label="客户端" value="客户端" />
             </el-select>
           </el-form-item>
 
