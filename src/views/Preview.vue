@@ -365,11 +365,12 @@ const getPageIcon = (data) => {
 
 <style scoped>
 .preview-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
   pointer-events: none;
+  overflow: hidden;
 }
 
 .preview-header {

@@ -12,7 +12,7 @@
 .app-layout {
   width: 100vw;
   height: 100vh;
-  background: #000000;
+  background: #ffffff;
   position: relative;
   overflow: hidden;
 }
