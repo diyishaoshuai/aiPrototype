@@ -78,10 +78,9 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
-import axios from 'axios'
 
 const props = defineProps({
   modelValue: {
@@ -143,7 +142,7 @@ const handleExceed = () => {
   ElMessage.warning('只能上传一个文件')
 }
 
-// 提交上传
+// 提交上传（纯静态版本，仅模拟）
 const handleSubmit = async () => {
   if (!formRef.value) return
 
@@ -158,30 +157,15 @@ const handleSubmit = async () => {
     uploading.value = true
 
     try {
-      const formData = new FormData()
-      formData.append('file', form.file)
-      formData.append('title', form.title)
-      formData.append('category', form.category)
-      formData.append('description', form.description)
-      formData.append('tags', form.tags)
+      // 模拟上传延迟
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      const response = await axios.post(`${apiBaseUrl}/api/prototypes/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-
-      if (response.data.success) {
-        ElMessage.success('上传成功')
-        emit('success')
-        handleClose()
-      } else {
-        ElMessage.error(response.data.error || '上传失败')
-      }
+      ElMessage.success('上传成功（仅本地预览，未实际保存）')
+      emit('success')
+      handleClose()
     } catch (error) {
       console.error('上传失败:', error)
-      ElMessage.error(error.response?.data?.error || '上传失败，请重试')
+      ElMessage.error('上传失败，请重试')
     } finally {
       uploading.value = false
     }
@@ -197,7 +181,6 @@ const handleClose = () => {
 }
 
 // 监听 props 变化
-import { watch } from 'vue'
 watch(() => props.modelValue, (val) => {
   visible.value = val
 })
