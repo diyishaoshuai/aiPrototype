@@ -77,7 +77,7 @@ pnpm build
 
 ## 在线预览
 
-访问：https://ai-prototype-hub.vercel.app
+访问：http://120.26.41.79
 
 ## 项目结构
 
