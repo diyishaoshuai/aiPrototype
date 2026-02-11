@@ -4,23 +4,13 @@
       <div class="header-content">
         <div class="logo">
           <div class="logo-icon">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <img src="/avatar.svg" alt="Logo" />
           </div>
           <div class="title-group">
             <h1 class="page-title">第一少帅的原型中心</h1>
             <span class="page-subtitle">First General Prototype Hub</span>
           </div>
         </div>
-        <button class="create-btn" @click="createPrototype">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          新建原型
-        </button>
       </div>
     </header>
 
@@ -102,20 +92,6 @@
           </div>
           <div class="card-body">
             <h3 class="card-title">{{ item.title }}</h3>
-            <div class="card-actions">
-              <button class="action-btn delete-btn" @click.stop="deletePrototype(item._id)" title="删除">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <button class="action-btn edit-btn" @click.stop="editPrototype(item._id)" title="编辑">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11 4H4C3.44772 4 3 4.44772 3 5V20C3 20.5523 3.44772 21 4 21H19C19.5523 21 20 20.5523 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -259,14 +235,22 @@ const deletePrototype = async (id) => {
 }
 
 .logo-icon {
-  width: 36px;
-  height: 36px;
-  color: #667eea;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 0.3s ease;
 }
 
+.logo-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .logo-icon:hover {
-  transform: rotate(180deg);
+  transform: scale(1.1);
 }
 
 .page-title {

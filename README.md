@@ -1,6 +1,6 @@
-# AI Prototype Hub
+# 第一少帅的原型中心
 
-基于 Vue 3 + Vite + MongoDB 的原型页面管理系统，用于快速创建、管理和预览各类应用原型。
+基于 Vue 3 + Vite 的纯静态原型页面展示系统，用于快速预览各类应用原型。
 
 ## ✨ 特性
 
@@ -31,18 +31,13 @@
 
 ## 技术栈
 
-### 主应用
-- **前端**: Vue 3 + Vite + Element Plus + Pinia
-- **后端**: Node.js + Express + MongoDB
-- **路由**: Vue Router
+- **前端框架**: Vue 3 (Composition API)
+- **构建工具**: Vite
+- **UI 组件**: Element Plus + Vant 4
 - **状态管理**: Pinia
-
-### 原型应用
-- **框架**: Vue 3 (Composition API)
-- **UI 组件**: Vant 4
-- **路由**: Vue Router (Hash 模式)
-- **构建**: Vite 多入口
-- **动画**: CSS Transitions & Animations
+- **路由**: Vue Router
+- **样式**: Tailwind CSS v4
+- **部署**: Vercel (纯静态)
 
 ## 快速开始
 
@@ -50,13 +45,12 @@
 
 - Node.js >= 16
 - pnpm >= 8
-- MongoDB >= 4.4
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/ai-prototype-hub.git
-cd ai-prototype-hub
+git clone https://github.com/diyishaonian/aiPrototype.git
+cd aiPrototype
 ```
 
 ### 2. 安装依赖
@@ -65,38 +59,25 @@ cd ai-prototype-hub
 pnpm install
 ```
 
-### 3. 启动 MongoDB
-
-确保 MongoDB 服务正在运行：
-
-```bash
-# Windows
-net start MongoDB
-
-# macOS/Linux
-sudo systemctl start mongod
-```
-
-### 4. 启动后端服务
-
-```bash
-node server/start.js
-```
-
-后端运行在：http://localhost:8080
-
-### 5. 启动前端服务
+### 3. 启动开发服务器
 
 ```bash
 pnpm dev
 ```
 
-前端运行在：http://localhost:3000
+访问 http://localhost:3000
 
-### 6. 访问应用
+### 4. 构建生产版本
 
-- **管理后台**: http://localhost:3000/
-- **原型预览**: 点击原型卡片的"预览"按钮
+```bash
+pnpm build
+```
+
+构建产物在 `dist` 目录。
+
+## 在线预览
+
+访问：https://ai-prototype-hub.vercel.app
 
 ## 项目结构
 
@@ -104,42 +85,23 @@ pnpm dev
 aiPrototype/
 ├── src/                          # 主应用前端代码
 │   ├── views/                   # 页面组件
-│   │   ├── Home.vue            # 首页
+│   │   ├── Dashboard.vue        # 首页
 │   │   └── Preview.vue         # 预览页面
 │   ├── stores/                  # Pinia 状态管理
+│   ├── data/                    # Mock 数据
 │   ├── router/                  # 路由配置
 │   ├── prototypes/              # 原型应用目录
 │   │   ├── short-video-app/    # 短视频原型
-│   │   │   ├── main.js         # 原型入口
-│   │   │   ├── App.vue         # 根组件
-│   │   │   ├── router.js       # 原型路由
-│   │   │   ├── components/     # 共享组件
-│   │   │   └── views/          # 原型页面
-│   │   │       ├── Home.vue    # 首页
-│   │   │       ├── DramaList.vue      # 短剧列表
-│   │   │       ├── DramaPlayer.vue    # 短剧播放器
-│   │   │       └── LandscapePlayer.vue # 横屏播放器
 │   │   ├── xingqu_web/         # 星趣官网（电脑端）
 │   │   ├── xingqu_h5/          # 星趣官网（手机端）
 │   │   └── xingqu-client/      # 星趣PC客户端
-│   │       ├── main.js         # 客户端入口
-│   │       ├── Layout.vue      # 全屏画布布局
-│   │       ├── router.js       # 客户端路由
-│   │       ├── components/     # 客户端组件
-│   │       │   └── DraggableWindow.vue  # 可拖拽窗口
-│   │       └── views/          # 客户端页面
-│   │           └── StreamingTool.vue    # 直播工具
 │   └── main.js                 # 主应用入口
-├── server/                      # Node.js 后端
-│   ├── index.js                # 服务器配置
-│   ├── start.js                # 启动文件
-│   ├── routes.js               # API 路由
-│   └── mockData.js             # 模拟数据
 ├── prototypes/                  # 原型入口 HTML
-│   ├── short-video-app.html    # 短视频应用入口
-│   ├── xingqu_web.html         # 星趣官网（电脑端）入口
-│   ├── xingqu_h5.html          # 星趣官网（手机端）入口
-│   └── xingqu-client.html      # 星趣PC客户端入口
+│   ├── short-video-app.html
+│   ├── xingqu_web.html
+│   ├── xingqu_h5.html
+│   └── xingqu-client.html
+├── public/                      # 静态资源
 └── vite.config.js              # Vite 多入口配置
 ```
 
@@ -317,10 +279,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        'short-video-app': resolve(__dirname, 'prototypes/short-video-app.html'),
-        'xingqu_web': resolve(__dirname, 'prototypes/xingqu_web.html'),
-        'xingqu_h5': resolve(__dirname, 'prototypes/xingqu_h5.html'),
-        'xingqu-client': resolve(__dirname, 'prototypes/xingqu-client.html'),
         'your-prototype': resolve(__dirname, 'prototypes/your-prototype.html'),
         // ... 其他入口
       }
@@ -331,40 +289,19 @@ export default defineConfig({
 
 ### 步骤 5: 添加原型信息
 
-在 `server/mockData.js` 中添加原型信息：
+在 `src/data/mockPrototypes.js` 中添加原型信息：
 
 ```javascript
 {
-  id: 'unique-id',
-  name: 'Your Prototype',
+  _id: 'your-prototype',
+  title: 'Your Prototype',
   description: '原型描述',
-  category: '移动端', // 或 '网页端'
+  category: '移动端', // 或 '网页端' / '客户端'
   tags: ['标签1', '标签2'],
-  filePath: '/src/prototypes/your-prototype/index.html#/',
-  pageStructure: [
-    // 页面结构定义
-  ]
+  filePath: '/prototypes/your-prototype.html',
+  status: 'PUBLISHED',
+  pageStructure: []
 }
-```
-
-## API 接口
-
-### 获取所有原型
-
-```
-GET /api/prototypes
-```
-
-### 获取单个原型
-
-```
-GET /api/prototypes/:id
-```
-
-### 健康检查
-
-```
-GET /health
 ```
 
 ## 开发指南
@@ -372,7 +309,6 @@ GET /health
 ### 代码规范
 
 - 使用 Vue 3 Composition API
-- 遵循 ESLint 规则
 - 组件命名使用 PascalCase
 - 文件命名使用 kebab-case
 
@@ -380,7 +316,7 @@ GET /health
 
 - 使用 scoped CSS
 - 移动端使用 vw/vh 单位
-- 颜色使用 CSS 变量
+- 使用 Tailwind CSS 工具类
 - 动画使用 CSS Transitions
 
 ### 提交规范
@@ -392,42 +328,6 @@ docs: 文档更新
 style: 代码格式调整
 refactor: 重构
 perf: 性能优化
-test: 测试相关
-chore: 构建/工具相关
-```
-
-## 常见问题
-
-### MongoDB 连接失败
-
-确保 MongoDB 服务正在运行，并检查连接字符串：
-
-```javascript
-// server/index.js
-mongoose.connect('mongodb://localhost:27017/ai-prototype-hub')
-```
-
-### 端口被占用
-
-修改端口配置：
-
-```javascript
-// server/start.js
-const PORT = process.env.PORT || 8080
-
-// vite.config.js
-server: {
-  port: 3000
-}
-```
-
-### 热更新不生效
-
-清除缓存并重启：
-
-```bash
-rm -rf node_modules/.vite
-pnpm dev
 ```
 
 ## 浏览器支持
@@ -443,4 +343,6 @@ MIT
 
 ---
 
-**注意**: 本项目仅用于原型展示和学习交流，不建议直接用于生产环境。
+**作者**: 第一少帅
+**项目**: 原型展示中心
+**用途**: 原型展示和学习交流
