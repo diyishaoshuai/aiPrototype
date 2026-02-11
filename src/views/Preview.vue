@@ -624,7 +624,7 @@ const getPageIcon = (data) => {
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   padding: 20px 0;
 }
 
