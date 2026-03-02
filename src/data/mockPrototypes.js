@@ -76,7 +76,7 @@ export const mockPrototypes = [
     description: '星趣直播推流工具客户端原型',
     category: '客户端',
     tags: ['直播', '工具', '桌面应用'],
-    filePath: '/prototypes/xingqu-client.html',
+    filePath: '/src/prototypes/xingqu-client/index.html',
     status: 'PUBLISHED',
     pageStructure: [],
     createdAt: '2024-01-01',

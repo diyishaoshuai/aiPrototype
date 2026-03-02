@@ -35,7 +35,8 @@ export default defineConfig(({ mode }) => {
           main: resolve(__dirname, 'index.html'),
           'short-video-app': resolve(__dirname, 'src/prototypes/short-video-app/index.html'),
           'xingqu-web': resolve(__dirname, 'src/prototypes/xingqu_web/index.html'),
-          'xingqu-h5': resolve(__dirname, 'src/prototypes/xingqu_h5/index.html')
+          'xingqu-h5': resolve(__dirname, 'src/prototypes/xingqu_h5/index.html'),
+          'xingqu-client': resolve(__dirname, 'src/prototypes/xingqu-client/index.html')
         },
         output: {
           chunkFileNames: 'js/[name]-[hash].js',
