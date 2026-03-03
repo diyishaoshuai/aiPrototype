@@ -189,11 +189,15 @@ onMounted(async () => {
       pageStructure.value = prototype.value.pageStructure
       // 设置默认页面 URL：优先使用页面结构中的第一个 URL，否则使用 filePath
       const firstUrl = findFirstUrl(prototype.value.pageStructure)
-      currentPageUrl.value = firstUrl || prototype.value.filePath
+      // 添加时间戳参数强制刷新缓存，解决首次加载白屏问题
+      const baseUrl = firstUrl || prototype.value.filePath
+      currentPageUrl.value = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`
     } else {
       // 如果没有配置页面结构，说明是单页面原型，不设置 pageStructure
       pageStructure.value = []
-      currentPageUrl.value = prototype.value.filePath
+      // 添加时间戳参数强制刷新缓存
+      const baseUrl = prototype.value.filePath
+      currentPageUrl.value = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`
     }
     console.log('Preview - currentPageUrl:', currentPageUrl.value)
     console.log('Preview - pageStructure:', pageStructure.value)
