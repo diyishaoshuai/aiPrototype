@@ -212,12 +212,12 @@ const applySettings = () => {
 .beauty-panel-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 300;
+  z-index: 200;
   animation: fadeIn 0.3s ease;
 }
 
@@ -230,11 +230,10 @@ const applySettings = () => {
   width: min(90vw, 90%, 500px);
   max-width: 500px;
   max-height: min(80vh, 600px);
-  background: linear-gradient(180deg, rgba(26, 26, 46, 0.98) 0%, rgba(15, 52, 96, 0.95) 100%);
-  border-radius: 12px;
-  border: 1px solid rgba(236, 64, 122, 0.4);
-  box-shadow: 0 8px 32px rgba(236, 64, 122, 0.3),
-              0 0 60px rgba(236, 64, 122, 0.2);
+  background: #1b1d27;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
   animation: slideUp 0.3s ease;
@@ -256,28 +255,19 @@ const applySettings = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(236, 64, 122, 0.3);
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
 }
 
 .panel-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(236, 64, 122, 0.5), transparent);
+  display: none;
 }
 
 .panel-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  background: linear-gradient(135deg, #ec407a 0%, #ff4081 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #fff;
   margin: 0;
 }
 
@@ -285,10 +275,10 @@ const applySettings = () => {
   width: 28px;
   height: 28px;
   border: none;
-  background: linear-gradient(135deg, rgba(236, 64, 122, 0.2), rgba(255, 64, 129, 0.1));
-  color: #ff4081;
+  background: transparent;
+  color: #c6c9d1;
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -300,8 +290,8 @@ const applySettings = () => {
 }
 
 .close-btn:hover {
-  background: linear-gradient(135deg, rgba(236, 64, 122, 0.4), rgba(255, 64, 129, 0.3));
-  transform: rotate(90deg);
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(0);
 }
 
 .panel-content {
@@ -321,11 +311,10 @@ const applySettings = () => {
 .section-title {
   font-size: 13px;
   font-weight: 600;
-  color: #ff4081;
+  color: #c6c9d1;
   margin: 0 0 12px 0;
   text-transform: uppercase;
   letter-spacing: 1px;
-  text-shadow: 0 0 10px rgba(236, 64, 122, 0.5);
 }
 
 .beauty-items {
@@ -405,16 +394,16 @@ const applySettings = () => {
 }
 
 .filter-item:hover {
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.8), rgba(22, 33, 62, 0.6));
-  border-color: rgba(236, 64, 122, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(236, 64, 122, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .filter-item.active {
-  background: linear-gradient(135deg, rgba(236, 64, 122, 0.3), rgba(255, 64, 129, 0.2));
-  border-color: #ec407a;
-  box-shadow: 0 0 20px rgba(236, 64, 122, 0.5);
+  background: rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
 }
 
 .filter-preview {
@@ -437,19 +426,13 @@ const applySettings = () => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 12px 16px;
-  border-top: 1px solid rgba(236, 64, 122, 0.3);
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
 }
 
 .panel-footer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(236, 64, 122, 0.5), transparent);
+  display: none;
 }
 
 .reset-btn,
@@ -464,27 +447,27 @@ const applySettings = () => {
 }
 
 .reset-btn {
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.6), rgba(22, 33, 62, 0.4));
-  border: 1px solid rgba(236, 64, 122, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.8);
 }
 
 .reset-btn:hover {
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.8), rgba(22, 33, 62, 0.6));
-  border-color: rgba(236, 64, 122, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 
 .apply-btn {
-  background: linear-gradient(135deg, #ec407a 0%, #ff4081 50%, #f06292 100%);
-  border: 1px solid #ec407a;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 1px solid #667eea;
   color: #fff;
-  box-shadow: 0 4px 16px rgba(236, 64, 122, 0.4);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .apply-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(236, 64, 122, 0.6);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
 /* 滚动条样式 */

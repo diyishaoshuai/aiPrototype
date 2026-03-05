@@ -110,7 +110,7 @@
               </div>
               <div class="tool-item" @click="showBeautyPanel = true">
                 <div class="tool-icon">✨</div>
-                <span class="tool-name">美化</span>
+                <span class="tool-name">美颜</span>
               </div>
               <div class="tool-item" @click="toggleMirror">
                 <div class="tool-icon">🪞</div>
@@ -118,7 +118,7 @@
               </div>
               <div class="tool-item" @click="showManagement = true">
                 <div class="tool-icon">⚙️</div>
-                <span class="tool-name">设置</span>
+                <span class="tool-name">直播管理</span>
               </div>
             </div>
           </section>
@@ -351,8 +351,6 @@
 
           <div class="chat-input-v4">
             <div class="input-toolbar">
-              <button class="tool-btn">😊</button>
-              <button class="tool-btn">🎁</button>
               <span class="input-limit">{{ messageText.length }}/50</span>
             </div>
             <div class="input-container">
@@ -484,38 +482,53 @@
     <div v-if="showManagement" class="modal-overlay" @click="showManagement = false">
       <div class="modal-card modal-lg" @click.stop>
         <div class="modal-header">
-          <span>直播间管理</span>
+          <span>直播管理</span>
           <button class="modal-close" @click="showManagement = false">×</button>
         </div>
+        <div class="modal-tabs">
+          <button :class="['tab-btn', {active: managementTab === 'blacklist'}]" @click="managementTab = 'blacklist'">拉黑列表</button>
+          <button :class="['tab-btn', {active: managementTab === 'mute'}]" @click="managementTab = 'mute'">禁言列表</button>
+          <button :class="['tab-btn', {active: managementTab === 'admin'}]" @click="managementTab = 'admin'">管理员</button>
+        </div>
         <div class="modal-body">
-          <div class="modal-section">
-            <div class="section-title">拉黑列表</div>
+          <!-- 拉黑列表 -->
+          <div v-if="managementTab === 'blacklist'" class="modal-section">
             <div class="link-list">
               <div v-for="item in blacklist" :key="item.id" class="link-item">
                 <div class="link-name">{{ item.name }}</div>
                 <button class="link-action" @click="unblockUser(item.id)">取消拉黑</button>
               </div>
+              <div v-if="blacklist.length === 0" class="empty-state">暂无拉黑用户</div>
             </div>
           </div>
-          <div class="modal-section">
-            <div class="section-title">禁言列表</div>
+
+          <!-- 禁言列表 -->
+          <div v-if="managementTab === 'mute'" class="modal-section">
             <div class="link-list">
               <div v-for="item in muteList" :key="item.id" class="link-item">
                 <div class="link-name">{{ item.name }}</div>
                 <button class="link-action" @click="unmuteUser(item.id)">取消禁言</button>
               </div>
+              <div v-if="muteList.length === 0" class="empty-state">暂无禁言用户</div>
             </div>
           </div>
-          <div class="modal-section">
-            <div class="section-title">添加屏蔽词</div>
-            <div class="blocked-words">
-              <div class="blocked-tags">
-                <span v-for="word in blockedWords" :key="word" class="tag-chip">{{ word }}</span>
+
+          <!-- 管理员 -->
+          <div v-if="managementTab === 'admin'" class="modal-section">
+            <div class="admin-search">
+              <input v-model="adminSearchKeyword" placeholder="搜索 ID 或昵称" class="search-input" />
+              <button class="btn-primary" @click="searchAndAddAdmin">搜索添加</button>
+            </div>
+            <div class="admin-actions">
+              <button class="btn-secondary" @click="showFansList = true">从粉丝列表添加</button>
+              <button class="btn-secondary" @click="showOnlineList = true">从在线列表添加</button>
+            </div>
+            <div class="link-list">
+              <div v-for="item in adminList" :key="item.id" class="link-item">
+                <div class="link-name">{{ item.name }}</div>
+                <button class="link-action" @click="removeAdmin(item.id)">移除</button>
               </div>
-              <div class="blocked-input">
-                <input v-model="blockedWordInput" placeholder="输入屏蔽词" />
-                <button class="btn-primary" @click="addBlockedWord">添加</button>
-              </div>
+              <div v-if="adminList.length === 0" class="empty-state">暂无管理员</div>
             </div>
           </div>
         </div>
@@ -1129,6 +1142,11 @@ const muteList = ref([
   { id: 11, name: '观众阿北' },
   { id: 12, name: '观众甜莓' }
 ])
+const managementTab = ref('blacklist')
+const adminList = ref([])
+const adminSearchKeyword = ref('')
+const showFansList = ref(false)
+const showOnlineList = ref(false)
 const blockedWords = ref(['刷屏', '广告'])
 const blockedWordInput = ref('')
 
@@ -1138,6 +1156,20 @@ const unblockUser = (id) => {
 
 const unmuteUser = (id) => {
   muteList.value = muteList.value.filter(item => item.id !== id)
+}
+
+const searchAndAddAdmin = () => {
+  const keyword = adminSearchKeyword.value.trim()
+  if (!keyword) return
+  const newAdmin = { id: Date.now(), name: keyword }
+  if (!adminList.value.find(a => a.name === keyword)) {
+    adminList.value.push(newAdmin)
+  }
+  adminSearchKeyword.value = ''
+}
+
+const removeAdmin = (id) => {
+  adminList.value = adminList.value.filter(item => item.id !== id)
 }
 
 const addBlockedWord = () => {
@@ -3734,6 +3766,37 @@ button:active {
   cursor: pointer;
 }
 
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: #8b8d98;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.tab-btn.active {
+  color: #fff;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
 .modal-body {
   padding: 16px;
   display: flex;
@@ -3757,6 +3820,35 @@ button:active {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.admin-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  flex: 1;
+  background: #11131a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6b6d78;
+  padding: 24px;
+  font-size: 13px;
 }
 
 .form-row {
