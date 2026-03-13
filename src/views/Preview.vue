@@ -3,7 +3,7 @@
     <header class="preview-header">
       <div class="header-content">
         <div class="header-left">
-          <button class="back-btn" @click="goBack">
+          <button v-if="!isSharedMode" class="back-btn" @click="goBack">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -12,6 +12,16 @@
             <h2>{{ prototype?.title }}</h2>
             <span class="category-badge">{{ prototype?.category }}</span>
           </div>
+        </div>
+        <div class="header-right">
+          <button class="share-btn" @click="handleShare" title="分享原型">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12C9 13.3807 7.88071 14.5 6.5 14.5C5.11929 14.5 4 13.3807 4 12C4 10.6193 5.11929 9.5 6.5 9.5C7.88071 9.5 9 10.6193 9 12Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M20 6.5C20 7.88071 18.8807 9 17.5 9C16.1193 9 15 7.88071 15 6.5C15 5.11929 16.1193 4 17.5 4C18.8807 4 20 5.11929 20 6.5Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M20 17.5C20 18.8807 18.8807 20 17.5 20C16.1193 20 15 18.8807 15 17.5C15 16.1193 16.1193 15 17.5 15C18.8807 15 20 16.1193 20 17.5Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M8.5 13L15.5 17M15.5 7L8.5 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -150,6 +160,8 @@ const editingNodeLabel = ref('')
 const treeRef = ref(null)
 const iframeRef = ref(null)
 
+const isSharedMode = computed(() => route.query.shared === 'true')
+
 // 页面结构树配置
 const treeProps = {
   children: 'children',
@@ -267,6 +279,17 @@ const cancelEdit = () => {
 
 const goBack = () => {
   router.push('/dashboard')
+}
+
+const handleShare = async () => {
+  const shareUrl = `${window.location.origin}/preview/${route.params.id}?shared=true`
+  try {
+    await navigator.clipboard.writeText(shareUrl)
+    ElMessage.success('分享链接已复制到剪贴板')
+  } catch (error) {
+    ElMessage.error('复制失败，请手动复制')
+    console.error('Clipboard error:', error)
+  }
 }
 
 // iframe加载完成后，监听其URL变化
@@ -393,6 +416,9 @@ const getPageIcon = (data) => {
   max-width: 1600px;
   margin: 0 auto;
   padding: 0 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header-left {
@@ -419,6 +445,35 @@ const getPageIcon = (data) => {
   background: #e5e7eb;
   color: #374151;
   transform: translateX(-2px);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.share-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .back-btn svg {

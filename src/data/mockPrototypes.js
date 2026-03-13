@@ -81,5 +81,17 @@ export const mockPrototypes = [
     pageStructure: [],
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01'
+  },
+  {
+    _id: 'whale-recharge',
+    title: '鲸鱼live充值',
+    description: '鲸鱼live平台充值页面',
+    category: '移动端',
+    tags: ['充值', '支付', '移动端'],
+    filePath: '/src/prototypes/whale-recharge/index.html',
+    status: 'PUBLISHED',
+    pageStructure: [],
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01'
   }
 ]
