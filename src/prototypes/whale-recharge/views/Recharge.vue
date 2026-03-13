@@ -63,6 +63,11 @@
         <p>• 账号保管责任由用户自行承担，账号出借、被盗、保管不善导致的损失，平台不予赔付。</p>
         <p>• 违规/非法充值一经发现，平台有权处置账号、不予退还款项，并保留追责权利。</p>
       </div>
+
+      <!-- 底部公司信息 -->
+      <div class="footer">
+        <p>海南引世网络科技有限公司</p>
+      </div>
     </div>
 
     <!-- 自定义金额弹窗 -->
@@ -359,6 +364,17 @@ const handleRecharge = () => {
 
 .tips p {
   margin: 6px 0;
+}
+
+.footer {
+  text-align: center;
+  padding: 24px 0;
+  color: #999;
+  font-size: 12px;
+}
+
+.footer p {
+  margin: 0;
 }
 
 .modal {
